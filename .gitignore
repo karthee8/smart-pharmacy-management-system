@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database and Local Data
+*.db
+*.sqlite3
+instance/
+AppData/
+Local/
+crash.log
+error.log
+
+# Environment & Secrets
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Distribution / Build
+build/
+dist/
+*.egg-info/
+
+# Node / JS
+node_modules/
+
+# OS Generated
+.DS_Store
+Thumbs.db
