@@ -9,8 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "build": {
-    "appId": "com.renukamedicals.app",
-    "productName": "Renuka Medicals",
+    "appId": "com.smartpharmacy.app",
+    "productName": "Smart Pharmacy Management System",
     "directories": {
       "output": "dist"
     },

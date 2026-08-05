@@ -10,7 +10,7 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
-        title: 'Renuka Medical',
+        title: 'Smart Pharmacy Management System',
         icon: path.join(__dirname, 'frontend', 'assets', 'icon.png'), // Will fallback to default if missing
         webPreferences: {
             nodeIntegration: true,

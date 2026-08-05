@@ -661,7 +661,7 @@ def generate_invoice():
     
     # Header: Title + Emergency
     header_table = Table([
-        [Paragraph("<b>RENUKA MEDICAL</b><br/>123 Health Street, City - 500001<br/>Tel: +91-9876543210", styles['Normal']),
+        [Paragraph("<b>SMART PHARMACY MANAGEMENT SYSTEM</b><br/>123 Health St. Tel: 1066", styles["Heading3"]),
          Paragraph("<font color='white'><b>EMERGENCY 1066</b></font>", styles['Normal'])]
     ], colWidths=[400, 150])
     header_table.setStyle(TableStyle([
@@ -745,7 +745,7 @@ def generate_invoice():
     
     # Footer Notes
     elements.append(Paragraph("<font size=8>This is a computer generated statement and requires no signature.</font>", styles['Normal']))
-    elements.append(Paragraph("<font size=8>Thank you for visiting Renuka Medical.</font>", styles['Normal']))
+    elements.append(Paragraph("<font size=8>Thank you for visiting Smart Pharmacy! Get well soon.</font>", styles['Normal']))
     
     doc.build(elements)
     buffer.seek(0)
@@ -770,7 +770,7 @@ def generate_purchase_order():
     
     # Header
     header_table = Table([
-        [Paragraph("<b>RENUKA MEDICAL - PURCHASE ORDER</b>", styles['Title'])],
+        [Paragraph("<b>SMART PHARMACY - PURCHASE ORDER</b><br/>123 Health St. Tel: 1066", styles["Heading3"])],
         [f"Date: {datetime.now().strftime('%Y-%m-%d')}"]
     ])
     elements.append(header_table)
@@ -1188,7 +1188,7 @@ def generate_thermal_receipt():
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     lines = [
-        "========== RENUKA MEDICAL ==========",
+        "==== SMART PHARMACY MANAGEMENT ====",
         "     123 Health St. Tel: 1066",
         "------------------------------------",
         f"Date: {now_str}",
@@ -1207,7 +1207,7 @@ def generate_thermal_receipt():
         "------------------------------------",
         f"TOTAL:                 Rs. {total:.2f}",
         "------------------------------------",
-        "  Thank you for visiting Renuka!   ",
+        " Thank you for visiting Smart Pharmacy! ",
         "   Get well soon! Consult Doctor.   ",
         "===================================="
     ])
@@ -1226,5 +1226,5 @@ if __name__ == "__main__":
     t.start()
     
     # Start the desktop window
-    webview.create_window("Renuka Medicals - Smart Pharmacy", app, width=1280, height=800, min_size=(1024, 768))
+    webview.create_window("Smart Pharmacy Management System", "http://127.0.0.1:5000", width=1400, height=900, min_size=(1024, 768))
     webview.start(debug=os.environ.get("DEBUG", False))

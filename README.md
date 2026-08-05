@@ -1,4 +1,4 @@
-# 🏥 Renuka Medicals — Smart Pharmacy Management System
+# 🏥 Smart Pharmacy Management System
 
 [![Python Version](https://img.shields.io/badge/Python-3.12%2B-blue.svg?logo=python)](https://python.org)
 [![Framework](https://img.shields.io/badge/Backend-Flask%202.3-green.svg?logo=flask)](https://flask.palletsprojects.com/)
