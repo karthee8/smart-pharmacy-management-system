@@ -1,0 +1,3722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <title>Renuka Medical – Pro Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #0ea5e9; /* Clinical Sky Blue */
+            --secondary-color: #10b981; /* Healthcare Emerald */
+            --accent-color: #38bdf8; /* Soft Cyan */
+            --success-color: #22c55e;
+            --danger-color: #ef4444; /* Alert Red */
+            --warning-color: #f59e0b; /* Amber */
+            --light-gray: #f0f4f8;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --sidebar-width: 280px;
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+            color: var(--text-dark);
+            background: transparent; /* Rely on medical-bg-container */
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.6rem 0.8rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Biometric Overlay */
+        #biometric-overlay {
+            position: fixed;
+            top:0; left:0; width:100vw; height:100vh;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: opacity 0.5s ease;
+        }
+        .fingerprint-scanner {
+            width: 120px;
+            height: 120px;
+            border: 3px solid rgba(0, 242, 254, 0.3);
+            border-radius: 20px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0,242,254,0.1);
+            transition: all 0.3s;
+        }
+        .fingerprint-scanner:hover { box-shadow: 0 0 50px rgba(0,242,254,0.4); border-color: rgba(0,242,254,0.8); }
+        .fingerprint-scanner i { font-size: 4rem; color: rgba(0,242,254,0.8); }
+        .scan-line {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 5px;
+            background: #00f2fe;
+            box-shadow: 0 0 10px #00f2fe;
+            animation: scan 2s linear infinite;
+            display: none;
+        }
+        @keyframes scan { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, rgba(10,25,47,0.95), rgba(2,12,27,0.98));
+            backdrop-filter: blur(10px);
+            color: white;
+            height: 100%;
+            overflow-y: auto;
+            flex-shrink: 0;
+            transition: left 0.3s ease;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+
+        .sidebar .logo {
+            padding: 2rem 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(0,242,254,0.3);
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar li {
+            padding: 14px 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: rgba(255,255,255,0.6);
+            font-weight: 500;
+            margin: 4px 12px;
+            border-radius: 8px;
+        }
+
+        .sidebar li i {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar li:hover {
+            color: white;
+            background: rgba(255,255,255,0.05);
+            transform: translateX(5px);
+        }
+
+        .sidebar li.active {
+            background: linear-gradient(90deg, rgba(32,201,151,0.2) 0%, transparent 100%);
+            color: var(--secondary-color);
+            border-left: 4px solid var(--secondary-color);
+            box-shadow: inset 20px 0 20px -20px rgba(32,201,151,0.5);
+        }
+
+        #main-app {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .content {
+            flex: 1;
+            height: 100%;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .header-left h2 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .user-info {
+            color: var(--text-light);
+        }
+
+        .notif-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+
+        .notif-dropdown {
+            position: absolute;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            z-index: 100;
+            min-width: 280px;
+            border: 1px solid var(--border-color);
+        }
+
+        .notif-dropdown.hidden {
+            display: none;
+        }
+
+        .tab-content {
+            display: none;
+            opacity: 0;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: viewEntrance 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes viewEntrance {
+            0% { opacity: 0; transform: translateY(30px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .screen {
+            display: none;
+            height: 100vh;
+            width: 100%;
+            overflow: auto;
+        }
+
+        /* ========== NEW 3D IMMERSIVE LOGIN ========== */
+        #login-screen {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(10, 18, 35, 0.4), rgba(10, 18, 35, 0.8)), url('assets/hospital_corridor.png') no-repeat center center;
+            background-size: cover;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            perspective: 1200px;
+        }
+
+        #login-screen.active {
+            display: flex;
+        }
+
+        /* --- Glowing Orbs --- */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: orbFloat 12s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+        .glow-orb-1 { width: 400px; height: 400px; background: #00f2fe; top: -10%; left: -5%; animation-delay: 0s; }
+        .glow-orb-2 { width: 350px; height: 350px; background: #b224ef; bottom: -15%; right: -5%; animation-delay: -4s; }
+        .glow-orb-3 { width: 250px; height: 250px; background: #2ed573; top: 50%; left: 40%; animation-delay: -8s; }
+        @keyframes orbFloat {
+            0% { transform: translate(0,0); }
+            100% { transform: translate(40px, -40px); }
+        }
+
+        /* --- Hospital Scene Animation --- */
+        .hospital-scene-bg {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40%;
+            z-index: 0;
+            background: linear-gradient(to bottom, transparent, rgba(15, 23, 42, 0.9));
+            pointer-events: none;
+        }
+        
+        .moving-stretcher {
+            position: absolute;
+            bottom: 20px;
+            left: -400px;
+            width: 350px;
+            height: 200px;
+            background: url('assets/stretcher.png') no-repeat center center;
+            background-size: contain;
+            filter: invert(1) drop-shadow(0 0 10px rgba(0, 242, 254, 0.5));
+            mix-blend-mode: screen;
+            animation: stretcherMove 15s linear infinite;
+        }
+
+        .heartbeat-radiation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px solid rgba(231, 76, 60, 0.8);
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.8);
+            animation: pulseRadiation 2.5s infinite cubic-bezier(0.66, 0, 0, 1);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .heartbeat-radiation:nth-child(2) {
+            animation-delay: 0.8s;
+        }
+
+        @keyframes walkAcross {
+            0% { left: -10%; transform: rotate(0deg); }
+            25% { transform: rotate(5deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(-5deg); }
+            100% { left: 110%; transform: rotate(0deg); }
+        }
+
+        @keyframes stretcherMove {
+            0% { left: -200px; }
+            100% { left: 110vw; }
+        }
+
+        @keyframes pulseRadiation {
+            0% { width: 100px; height: 100px; opacity: 1; border-width: 5px; }
+            100% { width: 800px; height: 800px; opacity: 0; border-width: 1px; }
+        }
+
+        .hospital-building {
+            position: absolute;
+            bottom: 20px;
+            right: 10%;
+            font-size: 15rem;
+            color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* --- 3D Medicine Molecule --- */
+        .molecule-scene {
+            width: 320px; height: 320px;
+            perspective: 800px;
+            position: relative;
+            z-index: 2;
+            margin-right: 60px;
+            flex-shrink: 0;
+        }
+        .molecule-container {
+            width: 100%; height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: moleculeSpin 15s linear infinite;
+        }
+        @keyframes moleculeSpin {
+            0% { transform: rotateY(0deg) rotateX(10deg); }
+            100% { transform: rotateY(360deg) rotateX(10deg); }
+        }
+
+        /* Atom nodes */
+        .atom {
+            position: absolute;
+            border-radius: 50%;
+            transform-style: preserve-3d;
+            box-shadow: inset -8px -8px 20px rgba(0,0,0,0.3), inset 8px 8px 20px rgba(255,255,255,0.2);
+        }
+        .atom::after {
+            content: '';
+            position: absolute;
+            top: 15%; left: 15%;
+            width: 30%; height: 30%;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+            filter: blur(3px);
+        }
+        .atom-core {
+            width: 90px; height: 90px;
+            background: linear-gradient(135deg, #00f2fe, #0072ff);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) translateZ(0px);
+            box-shadow: 0 0 60px rgba(0,242,254,0.6), inset -8px -8px 20px rgba(0,0,0,0.3), inset 8px 8px 20px rgba(255,255,255,0.3);
+        }
+        .atom-1 {
+            width: 50px; height: 50px;
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            top: 10%; left: 15%;
+            transform: translateZ(80px);
+            animation: atomPulse 3s ease-in-out infinite alternate;
+        }
+        .atom-2 {
+            width: 45px; height: 45px;
+            background: linear-gradient(135deg, #2ed573, #7bed9f);
+            top: 10%; right: 15%;
+            transform: translateZ(-60px);
+            animation: atomPulse 3s ease-in-out infinite alternate -1s;
+        }
+        .atom-3 {
+            width: 55px; height: 55px;
+            background: linear-gradient(135deg, #b224ef, #7b2ff7);
+            bottom: 10%; left: 20%;
+            transform: translateZ(-90px);
+            animation: atomPulse 3s ease-in-out infinite alternate -2s;
+        }
+        .atom-4 {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #f9ca24, #f0932b);
+            bottom: 15%; right: 18%;
+            transform: translateZ(70px);
+            animation: atomPulse 3s ease-in-out infinite alternate -0.5s;
+        }
+        .atom-5 {
+            width: 35px; height: 35px;
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            top: 50%; left: 5%;
+            transform: translateZ(50px) translateY(-50%);
+            animation: atomPulse 3s ease-in-out infinite alternate -1.5s;
+        }
+        .atom-6 {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            top: 50%; right: 5%;
+            transform: translateZ(-50px) translateY(-50%);
+            animation: atomPulse 3s ease-in-out infinite alternate -2.5s;
+        }
+
+        @keyframes atomPulse {
+            0% { box-shadow: 0 0 15px rgba(255,255,255,0.2); }
+            100% { box-shadow: 0 0 35px rgba(255,255,255,0.5); }
+        }
+
+        /* Bond lines between atoms */
+        .bond {
+            position: absolute;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(0,242,254,0.8), rgba(0,242,254,0.1));
+            transform-origin: left center;
+            border-radius: 2px;
+            box-shadow: 0 0 8px rgba(0,242,254,0.4);
+        }
+        .bond-1 { width: 110px; top: 38%; left: 28%; transform: rotate(-35deg) translateZ(40px); }
+        .bond-2 { width: 100px; top: 38%; left: 48%; transform: rotate(30deg) translateZ(-30px); }
+        .bond-3 { width: 120px; top: 60%; left: 25%; transform: rotate(35deg) translateZ(-45px); }
+        .bond-4 { width: 95px; top: 62%; left: 50%; transform: rotate(-25deg) translateZ(35px); }
+        .bond-5 { width: 80px; top: 48%; left: 12%; transform: rotate(0deg) translateZ(25px); }
+        .bond-6 { width: 85px; top: 48%; left: 60%; transform: rotate(5deg) translateZ(-25px); }
+
+        /* Electron ring orbits */
+        .orbit-ring {
+            position: absolute;
+            border: 2px solid rgba(0,242,254,0.2);
+            border-radius: 50%;
+            top: 50%; left: 50%;
+            transform-style: preserve-3d;
+        }
+        .orbit-ring-1 {
+            width: 260px; height: 260px;
+            margin-top: -130px; margin-left: -130px;
+            transform: rotateX(70deg) rotateZ(0deg);
+            animation: orbitSpin 8s linear infinite;
+            border-color: rgba(0,242,254,0.3);
+        }
+        .orbit-ring-2 {
+            width: 300px; height: 300px;
+            margin-top: -150px; margin-left: -150px;
+            transform: rotateX(70deg) rotateZ(60deg);
+            animation: orbitSpin 12s linear infinite reverse;
+            border-color: rgba(178,36,239,0.25);
+        }
+        .orbit-ring-3 {
+            width: 240px; height: 240px;
+            margin-top: -120px; margin-left: -120px;
+            transform: rotateX(70deg) rotateZ(120deg);
+            animation: orbitSpin 10s linear infinite;
+            border-color: rgba(46,213,115,0.2);
+        }
+        @keyframes orbitSpin {
+            0% { transform: rotateX(70deg) rotateZ(0deg); }
+            100% { transform: rotateX(70deg) rotateZ(360deg); }
+        }
+
+        /* Electron dots on rings */
+        .electron {
+            position: absolute;
+            width: 10px; height: 10px;
+            background: #00f2fe;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #00f2fe, 0 0 30px #00f2fe;
+            top: -5px; left: 50%;
+            margin-left: -5px;
+        }
+        .orbit-ring-2 .electron { background: #b224ef; box-shadow: 0 0 15px #b224ef; }
+        .orbit-ring-3 .electron { background: #2ed573; box-shadow: 0 0 15px #2ed573; }
+
+        /* --- Auth Glass Card --- */
+        .auth-glass-card {
+            width: 420px;
+            padding: 40px;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-radius: 24px;
+            border: 1px solid rgba(0,242,254,0.2);
+            box-shadow:
+                0 30px 60px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.08);
+            position: relative;
+            z-index: 5;
+            animation: cardEnter 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform: translateY(30px);
+            opacity: 0;
+        }
+        @keyframes cardEnter {
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .auth-glass-card .brand-strip {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .auth-glass-card .brand-strip .brand-icon {
+            width: 60px; height: 60px;
+            background: linear-gradient(135deg, #00f2fe, #0072ff);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            margin-bottom: 12px;
+            box-shadow: 0 8px 25px rgba(0,242,254,0.3);
+            animation: iconGlow 3s ease-in-out infinite alternate;
+        }
+        @keyframes iconGlow {
+            0% { box-shadow: 0 8px 25px rgba(0,242,254,0.3); }
+            100% { box-shadow: 0 8px 40px rgba(0,242,254,0.6), 0 0 60px rgba(0,242,254,0.15); }
+        }
+        .auth-glass-card .brand-strip h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .auth-glass-card .brand-strip p {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+        }
+
+        /* Tab Switcher */
+        .auth-tab-switcher {
+            display: flex;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 28px;
+        }
+        .auth-tab-switcher button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .auth-tab-switcher button.active {
+            background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(0,114,255,0.2));
+            color: #00f2fe;
+            box-shadow: 0 2px 10px rgba(0,242,254,0.15);
+        }
+
+        /* Input Fields */
+        .auth-field {
+            position: relative;
+            margin-bottom: 18px;
+        }
+        .auth-field i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255,255,255,0.3);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+        .auth-field input, .auth-field select {
+            width: 100%;
+            padding: 14px 16px 14px 46px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .auth-field input::placeholder { color: rgba(255,255,255,0.3); }
+        .auth-field input:focus, .auth-field select:focus {
+            border-color: rgba(0,242,254,0.5);
+            background: rgba(0,242,254,0.05);
+            box-shadow: 0 0 20px rgba(0,242,254,0.1);
+        }
+        .auth-field input:focus ~ i, .auth-field select:focus ~ i {
+            color: #00f2fe;
+        }
+        .auth-field select option { background: #0f172a; color: white; }
+
+        /* Submit Button */
+        .auth-submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #00f2fe, #0072ff);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0,242,254,0.3);
+            margin-top: 6px;
+        }
+        .auth-submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        .auth-submit-btn:hover::before { left: 100%; }
+        .auth-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,242,254,0.4);
+        }
+
+        /* Biometric Button */
+        .bio-btn {
+            width: 52px; height: 52px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,242,254,0.3);
+            background: rgba(0,242,254,0.08);
+            color: #00f2fe;
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .bio-btn:hover {
+            background: rgba(0,242,254,0.15);
+            box-shadow: 0 0 25px rgba(0,242,254,0.2);
+        }
+
+        .auth-form-container {
+            display: none;
+            animation: authSlideIn 0.4s ease forwards;
+        }
+        .auth-form-container.active { display: block; }
+        @keyframes authSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .demo-hint {
+            text-align: center;
+            margin-top: 18px;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 0.3px;
+        }
+
+        /* advanced-input-group still used elsewhere in the app */
+        .advanced-input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        .advanced-input-group input, .advanced-input-group select {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 1rem;
+            background: rgba(15,23,42,0.6);
+            transition: var(--transition);
+            color: white;
+            outline: none;
+        }
+        .advanced-input-group input:focus, .advanced-input-group select:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 4px rgba(0,242,254,0.1);
+        }
+        .advanced-input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            transition: var(--transition);
+        }
+        .advanced-input-group input:focus + i {
+            color: var(--secondary-color);
+        }
+
+        .btn-pro {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #00b4db 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(32,201,151,0.3);
+            transition: var(--transition);
+        }
+        .btn-pro:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(32,201,151,0.4);
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(0,0,0,0.02);
+            transform-style: preserve-3d;
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+        }
+
+        .kpi-card:hover {
+            transform: perspective(1000px) translateY(-10px) rotateX(4deg) rotateY(-2deg);
+            box-shadow: -10px 30px 50px rgba(0, 0, 0, 0.3);
+            border-color: rgba(46, 213, 115, 0.5);
+        }
+        
+        .kpi-card:nth-child(1) { animation-delay: 0.1s; }
+        .kpi-card:nth-child(2) { animation-delay: 0.2s; }
+        .kpi-card:nth-child(3) { animation-delay: 0.3s; }
+        .kpi-card:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .kpi-icon {
+            font-size: 2.2rem;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(32,201,151,0.15) 0%, rgba(0,242,254,0.15) 100%);
+            color: var(--secondary-color);
+            border-radius: 15px;
+        }
+
+        .kpi-content h3 {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .charts-grid, .widgets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-card, .widget-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .transaction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .transaction-item {
+            padding: 0.8rem;
+            background: var(--light-gray);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reorder-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem;
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .suggest-qty {
+            background: #f39c12;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+
+        .expiry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .expiry-badge {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 5px;
+            text-align: center;
+            font-size: 0.7rem;
+            border-left: 3px solid;
+        }
+
+        .expiry-badge.critical { border-left-color: #e74c3c; background: #ffeaea; }
+        .expiry-badge.warning { border-left-color: #f39c12; background: #fff3e0; }
+        .expiry-badge.good { border-left-color: #27ae60; }
+
+        .ai-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .ai-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .ai-result {
+            margin-top: 1rem;
+            padding: 0.8rem;
+            background: var(--light-gray);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .voice-btn {
+            background: #9b59b6;
+        }
+
+        .voice-btn.listening {
+            background: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .data-table td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .data-table tbody tr {
+            transition: var(--transition);
+        }
+
+        .data-table tbody tr:hover {
+            background: #f1f5f9;
+        }
+
+        /* Pill status badges for tables */
+        .status-pill {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+        
+        .status-low {
+            background: rgba(255, 23, 68, 0.1);
+            color: var(--danger-color);
+        }
+        
+        .status-good {
+            background: rgba(0, 230, 118, 0.1);
+            color: var(--success-color);
+        }
+
+        .invoice-item-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+            align-items: center;
+        }
+
+        .total-display {
+            background: var(--light-gray);
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: right;
+            font-weight: 700;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 450px;
+        }
+
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                height: 100%;
+                z-index: 1000;
+                width: 260px;
+            }
+            .sidebar.open {
+                left: 0;
+            }
+            .mobile-menu-toggle {
+                display: block;
+            }
+            .content {
+                padding: 1rem;
+                padding-top: 4rem;
+            }
+            .kpi-grid, .charts-grid, .widgets-grid, .ai-grid {
+                grid-template-columns: 1fr;
+            }
+            .invoice-item-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-menu-toggle {
+                display: none;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .voice-feedback {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        .ocr-preview {
+            background: #f0f0f0;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            max-height: 250px;
+            overflow: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }        /* Autocomplete Dropdown */
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            list-style: none;
+            padding: 0;
+            margin: 5px 0 0 0;
+        }
+        .autocomplete-dropdown li {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: background 0.2s;
+        }
+        .autocomplete-dropdown li:hover {
+            background: var(--light-gray);
+        }
+        .autocomplete-dropdown li:last-child {
+            border-bottom: none;
+        }
+        .ac-name { font-weight: bold; color: var(--primary-color); }
+        .ac-details { font-size: 0.85rem; color: var(--text-light); display: flex; gap: 10px; }
+        .ac-details span { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+        
+        .invoice-item-row { position: relative; }
+
+        /* ADVANCED POS ANIMATIONS & AESTHETICS */
+        .billing-card {
+            background: rgba(255, 255, 255, 0.9) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .billing-card:hover {
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+        }
+
+        .billing-card input, .billing-card select {
+            transition: all 0.3s ease;
+            background: #fdfdfd;
+        }
+
+        .billing-card input:focus, .billing-card select:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(32, 201, 151, 0.2) !important;
+            border-color: var(--secondary-color) !important;
+            background: #fff;
+        }
+
+        @keyframes slideInUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-slide-up {
+            animation: slideInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes restingHeartbeat {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 213, 115, 0.4); }
+            10% { transform: scale(1.02); box-shadow: 0 0 0 6px rgba(46, 213, 115, 0); }
+            20% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 213, 115, 0); }
+            30% { transform: scale(1.03); box-shadow: 0 0 0 10px rgba(46, 213, 115, 0); }
+        }
+
+        .btn-checkout {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease !important;
+            z-index: 1;
+            animation: restingHeartbeat 3s infinite;
+        }
+
+        .btn-checkout::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: all 0.5s ease;
+            z-index: -1;
+        }
+
+        .btn-checkout:hover::before {
+            left: 100%;
+        }
+
+        .btn-checkout:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(32, 201, 151, 0.4);
+        }
+
+        .total-display {
+            transition: text-shadow 0.3s ease, color 0.3s ease;
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); color: var(--text-dark); text-shadow: none; }
+            15% { transform: scale(1.1); color: var(--secondary-color); text-shadow: 0 0 15px rgba(46, 213, 115, 0.8); }
+            30% { transform: scale(1); color: var(--secondary-color); text-shadow: 0 0 10px rgba(46, 213, 115, 0.6); }
+            45% { transform: scale(1.15); color: var(--danger-color); text-shadow: 0 0 20px rgba(255, 71, 87, 0.8); }
+            100% { transform: scale(1); color: var(--primary-dark); text-shadow: none; }
+        }
+
+        .total-display.updated {
+            animation: heartbeat 0.8s ease-out forwards;
+        }
+
+        /* Animated Receipt Modal */
+        #receipt-modal {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            animation: fadeInReceipt 0.4s ease forwards;
+        }
+
+        .receipt-paper {
+            background: #fff;
+            width: 400px;
+            max-height: 85vh;
+            padding: 30px;
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            font-family: 'Courier New', Courier, monospace;
+            overflow-y: auto;
+            transform: translateY(50px);
+            opacity: 0;
+            animation: slideUpReceipt 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s forwards;
+        }
+
+        .receipt-header { text-align: center; margin-bottom: 15px; border-bottom: 2px dashed #ccc; padding-bottom: 15px; }
+        .receipt-header h2 { margin: 0; color: #333; font-size: 1.5rem; letter-spacing: 1px; font-family: 'Segoe UI', sans-serif;}
+        .receipt-details { font-size: 0.9rem; color: #555; margin-bottom: 20px; line-height: 1.5; }
+        
+        .receipt-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+        .receipt-table th { border-bottom: 1px dashed #ccc; text-align: left; padding-bottom: 5px; }
+        .receipt-table td { padding: 6px 0; vertical-align: top; }
+        .receipt-table .r-right { text-align: right; }
+        
+        .receipt-item-row { opacity: 0; animation: printItem 0.4s ease forwards; }
+        
+        .receipt-totals { border-top: 2px dashed #ccc; padding-top: 15px; margin-bottom: 20px; }
+        .receipt-totals .r-total-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem;}
+        .receipt-totals .r-grand-total { font-weight: bold; font-size: 1.2rem; border-top: 1px solid #333; padding-top: 10px; margin-top: 5px;}
+        
+        .receipt-actions { display: flex; gap: 10px; justify-content: center; font-family: 'Segoe UI', sans-serif;}
+        
+        @keyframes fadeInReceipt { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUpReceipt { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes printItem { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Animated Medical Background */
+        .medical-bg-container {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            overflow: hidden;
+            z-index: -1;
+            pointer-events: none;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); /* Deep dark rich gradient */
+        }
+
+        /* --- 3D Floating Medicines --- */
+        .pill-3d {
+            position: absolute;
+            width: 80px;
+            height: 30px;
+            border-radius: 15px;
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            box-shadow: 
+                inset 5px 5px 10px rgba(255,255,255,0.9),
+                inset -5px -5px 10px rgba(0,0,0,0.15),
+                10px 10px 20px rgba(0,0,0,0.2);
+            animation: tumble 20s infinite linear;
+            transform-style: preserve-3d;
+            opacity: 0.9;
+        }
+
+        .capsule-3d {
+            position: absolute;
+            width: 40px;
+            height: 100px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, #ff416c 50%, #ffffff 50%);
+            box-shadow: 
+                inset 10px 0 15px rgba(255,255,255,0.7),
+                inset -10px 0 15px rgba(0,0,0,0.2),
+                10px 10px 25px rgba(0,0,0,0.3);
+            animation: tumble 25s infinite linear;
+            transform-style: preserve-3d;
+            opacity: 0.95;
+        }
+        
+        .capsule-blue { background: linear-gradient(180deg, #00f2fe 50%, #ffffff 50%); }
+        .capsule-green { background: linear-gradient(180deg, #00b09b 50%, #ffffff 50%); }
+        .capsule-purple { background: linear-gradient(180deg, #b224ef 50%, #ffffff 50%); }
+
+        .capsule-3d::after {
+            content: ''; position: absolute;
+            top: 5%; left: 10%; width: 20%; height: 90%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent);
+        }
+        .pill-3d::after {
+            content: ''; position: absolute;
+            top: 10%; left: 5%; width: 90%; height: 20%;
+            border-radius: 10px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.9), transparent);
+        }
+
+        @keyframes tumble {
+            0% { transform: translateY(110vh) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(var(--s, 1)); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-20vh) rotateX(720deg) rotateY(360deg) rotateZ(180deg) scale(var(--s, 1)); opacity: 0; }
+        }
+
+        .m-1 { left: 10%; --s: 0.8; animation-duration: 22s; }
+        .m-2 { left: 25%; --s: 1.1; animation-duration: 28s; animation-delay: -5s; }
+        .m-3 { left: 45%; --s: 1.3; animation-duration: 18s; animation-delay: -12s; }
+        .m-4 { left: 65%; --s: 1.5; animation-duration: 35s; animation-delay: -20s; }
+        .m-5 { left: 80%; --s: 0.7; animation-duration: 25s; animation-delay: -2s; }
+        .m-6 { left: 90%; --s: 0.9; animation-duration: 30s; animation-delay: -15s; }
+        .m-7 { left: 35%; --s: 0.6; animation-duration: 24s; animation-delay: -8s; }
+        .m-8 { left: 55%; --s: 1.0; animation-duration: 27s; animation-delay: -18s; }
+        
+    </style>
+    <style>
+        #debug-log { position: fixed; top: 0; right: 0; background: rgba(0,0,0,0.8); color: lime; z-index: 9999; padding: 10px; max-height: 200px; overflow-y: auto; pointer-events: none; }
+    </style>
+    <script>
+        window.onerror = function(msg, url, line) {
+            let el = document.getElementById('debug-log');
+            if(!el) { el = document.createElement('div'); el.id = 'debug-log'; document.body.appendChild(el); }
+            el.innerHTML += `<br>[ERR] ${msg} at ${line}`;
+        };
+    </script>
+    <!-- Dark Glassmorphism Theme Overrides -->
+    <style>
+        :root {
+            --primary-color: #00f2fe;
+            --text-dark: #f8fafc;
+            --text-light: #94a3b8;
+            --card-bg: rgba(15, 23, 42, 0.7);
+            --border-color: rgba(0, 242, 254, 0.3);
+            --light-gray: rgba(255, 255, 255, 0.05);
+        }
+
+        /* ============ COMPLETE DARK MODE + 3D BACKGROUND ============ */
+        body, html { background: #0a0f1e !important; }
+        
+        /* Semi-transparent so 3D pills show through */
+        #main-app { background: rgba(10, 15, 30, 0.85) !important; }
+        .content { background: rgba(10, 15, 30, 0.75) !important; }
+        .sidebar { background: rgba(10, 20, 40, 0.95) !important; }
+        
+        /* Cards & Headers - glassmorphism */
+        .top-header, .stat-card, .dashboard-card, .receipt-paper, .chart-card, .widget-card, .ai-card, .billing-card, .expiry-badge {
+            background: rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(15px) !important;
+            -webkit-backdrop-filter: blur(15px) !important;
+            border: 1px solid rgba(0,242,254,0.2) !important;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3) !important;
+        }
+        .header-left h2, .dashboard-card h3 { color: #00f2fe !important; }
+
+        /* Inputs */
+        input, select, textarea, .advanced-input-group input, .advanced-input-group select, .search-bar input, .billing-card input, .billing-card select {
+            background: rgba(15, 23, 42, 0.8) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(0,242,254,0.25) !important;
+        }
+        input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.4) !important; }
+        select option { background: #0f172a !important; color: #ffffff !important; }
+
+        /* --- TABLES: SOLID DARK BACKGROUNDS --- */
+        table, .data-table, .advanced-table, .inventory-table { 
+            background: #0d1525 !important; 
+        }
+        table th, .data-table th { 
+            background: #162033 !important; 
+            color: #00f2fe !important; 
+            font-weight: 700 !important; 
+            border-bottom: 2px solid rgba(0,242,254,0.4) !important; 
+        }
+        table td, .data-table td { 
+            background: #0d1525 !important; 
+            color: #ffffff !important; 
+            font-weight: 500 !important; 
+            border-bottom: 1px solid rgba(255,255,255,0.08) !important; 
+        }
+        table tr:nth-child(even) td, .data-table tr:nth-child(even) td { 
+            background: #131d2e !important; 
+        }
+        table tr:hover td, .data-table tr:hover td { 
+            background: #1e3a5f !important; 
+        }
+        .table-container { background: #0d1525 !important; border-radius: 12px; }
+
+        /* ============ FORCE WHITE TEXT ON EVERYTHING ============ */
+        *, *::before, *::after { color: #ffffff; }
+        body, div, span, p, a, li, ul, ol,
+        h1, h2, h3, h4, h5, h6,
+        label, strong, b, em, i, small,
+        td, th, caption, 
+        input, select, textarea, button,
+        .tab-content *, .content *, .sidebar *,
+        .stat-card *, .dashboard-card *, .top-header *,
+        .kpi-grid *, .modal-content *, .chart-card *, .widget-card *, .ai-card *, .billing-card *, .autocomplete-dropdown *, .receipt-paper *, .invoice-item-row * {
+            color: #ffffff !important;
+        }
+        /* Accent colors for specific elements */
+        .header-left h2, .dashboard-card h3, .modal-header h2 { color: #00f2fe !important; }
+        table th, .data-table th { color: #00f2fe !important; }
+        .sidebar li.active { color: #2ed573 !important; }
+        .sidebar .logo, .sidebar .logo * { color: #00f2fe !important; }
+        .status-pill { font-weight: 700 !important; }
+        .btn-primary { background: linear-gradient(135deg, #00f2fe, #0072ff) !important; }
+        
+        /* ============ PREMIUM GLASSMORPHISM DASHBOARD CARDS ============ */
+        .kpi-card {
+            background: rgba(10, 18, 35, 0.75) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(0,242,254,0.15) !important;
+            box-shadow: 
+                0 8px 32px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.05) !important;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        }
+        .kpi-card:hover {
+            border-color: rgba(0,242,254,0.4) !important;
+            box-shadow: 
+                0 15px 40px rgba(0,0,0,0.5),
+                0 0 30px rgba(0,242,254,0.1),
+                inset 0 1px 0 rgba(255,255,255,0.08) !important;
+        }
+        .kpi-value {
+            color: #ffffff !important;
+            text-shadow: 0 0 20px rgba(0,242,254,0.3) !important;
+        }
+        .kpi-content h3 {
+            color: #94a3b8 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        .kpi-icon {
+            background: linear-gradient(135deg, rgba(0,242,254,0.15), rgba(46,213,115,0.15)) !important;
+            box-shadow: 0 0 20px rgba(0,242,254,0.1) !important;
+        }
+        .kpi-icon i {
+            color: #00f2fe !important;
+        }
+
+        .chart-card, .widget-card {
+            background: rgba(10, 18, 35, 0.75) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(0,242,254,0.12) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+        }
+        .chart-card h3, .widget-card h3 {
+            color: #00f2fe !important;
+            text-shadow: 0 0 15px rgba(0,242,254,0.2) !important;
+        }
+        .transaction-item {
+            background: rgba(15, 23, 42, 0.6) !important;
+            border: 1px solid rgba(255,255,255,0.05) !important;
+        }
+        .top-header {
+            background: rgba(10, 18, 35, 0.8) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(0,242,254,0.12) !important;
+        }
+        
+        /* Auth card */
+        .auth-glass-card { background: rgba(15, 23, 42, 0.65) !important; border: 1px solid rgba(0,242,254,0.2); }
+        
+        /* Modals */
+        .modal-content {
+            background: rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0,242,254,0.2);
+        }
+
+        /* Section backgrounds */
+        .tab-content { background: transparent !important; }
+        section, .card, .panel, .box, .wrapper { background: rgba(15, 23, 42, 0.6) !important; }
+
+        /* ============ 3D ANIMATED DASHBOARD BACKGROUND ============ */
+        .content {
+            position: relative !important;
+        }
+        #dashboard-3d-canvas {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            width: calc(100% - 280px);
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        /* All content above the canvas */
+        .content > *:not(#dashboard-3d-canvas) {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+
+</head>
+<body>
+    <!-- Biometric Overlay Removed -->
+    
+    
+    <!-- 3D Animated Medical Background -->
+    <div class="medical-bg-container" style="perspective: 800px;">
+        <div class="pill-3d m-1"></div>
+        <div class="capsule-3d m-2 capsule-blue"></div>
+        <div class="pill-3d m-3"></div>
+        <div class="capsule-3d m-4"></div>
+        <div class="pill-3d m-5"></div>
+        <div class="capsule-3d m-6 capsule-green"></div>
+        <div class="capsule-3d m-7 capsule-purple"></div>
+        <div class="pill-3d m-8"></div>
+    </div>
+    <!-- ========== NEW 3D IMMERSIVE LOGIN ========== -->
+    <div id="login-screen" class="screen active">
+        <!-- Hospital Scene & Heartbeat Radiation -->
+        <div class="heartbeat-radiation"></div>
+        <div class="heartbeat-radiation"></div>
+        
+        <div class="hospital-scene-bg">
+            <div class="moving-stretcher"></div>
+        </div>
+        <!-- Glowing Orbs (for clinical atmosphere) -->
+        <div class="glow-orb glow-orb-1" style="background: rgba(0,242,254,0.4);"></div>
+        <div class="glow-orb glow-orb-2" style="background: rgba(39,174,96,0.3);"></div>
+        <div class="glow-orb glow-orb-3" style="background: rgba(255,255,255,0.1);"></div>
+
+        <!-- Glassmorphism Auth Card -->
+        <div class="auth-glass-card">
+            <div style="position:absolute; top:12px; right:15px;">
+                <select onchange="changeBgTheme(this.value)" style="padding:4px 8px; font-size:0.75rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:12px; color:white; cursor:pointer;">
+                    <option value="ambient" style="background:#0f172a;">✨ Ambient</option>
+                    <option value="deepspace" style="background:#0f172a;">🌌 Deep Space</option>
+                    <option value="hospital" style="background:#0f172a;">🏥 Hospital</option>
+                    <option value="clean" style="background:#0f172a;">🔬 Clean Studio</option>
+                </select>
+            </div>
+            <div class="brand-strip">
+                <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+                <h1>Renuka Medical</h1>
+                <p>AI-Powered Pharmacy Management</p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="auth-tab-switcher">
+                <button class="active" id="btn-show-login" onclick="switchAuth('login')"><i class="fas fa-sign-in-alt" style="margin-right:6px;"></i>Sign In</button>
+                <button id="btn-show-signup" onclick="switchAuth('signup')"><i class="fas fa-user-plus" style="margin-right:6px;"></i>Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <div class="auth-form-container active" id="form-login">
+                <form id="login-form">
+                    <div class="auth-field">
+                        <input type="text" id="username" placeholder="Username" required>
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="auth-field">
+                        <input type="password" id="password" placeholder="Password" required>
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <button type="submit" class="auth-submit-btn" style="flex:1;">Sign In <i class="fas fa-arrow-right" style="margin-left:8px;"></i></button>
+                        <button type="button" class="bio-btn" onclick="simulateBiometricScan(this)" title="Biometric Login">
+                            <i class="fas fa-fingerprint"></i>
+                        </button>
+                    </div>
+                    <p id="biometric-status" style="font-weight:bold; color:#00f2fe; text-align:center; height:20px; margin:10px 0 0 0;"></p>
+                    <!-- Demo hint removed for production -->
+                </form>
+            </div>
+
+            <!-- Signup Form -->
+            <div class="auth-form-container" id="form-signup">
+                <form id="signup-form">
+                    <div class="auth-field">
+                        <input type="text" id="signup-username" placeholder="Full Name" required>
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="auth-field">
+                        <input type="password" id="signup-password" placeholder="Create Password" required oninput="checkPasswordStrength(this.value)">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div id="password-strength-container" style="width:100%; max-width:350px; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; margin: -10px 0 15px 0; overflow:hidden;">
+                        <div id="password-strength-bar" style="width:0%; height:100%; transition:width 0.3s, background 0.3s; background:#ff4b2b;"></div>
+                    </div>
+                    <p id="password-strength-text" style="margin:-10px 0 15px 0; font-size:0.75rem; color:#ccc; text-align:left; width:100%; max-width:350px;"></p>
+                    
+                    <div class="auth-field">
+                        <select id="signup-role">
+                            <option value="staff">Staff</option>
+                            <option value="pharmacist">Pharmacist</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <i class="fas fa-user-tag"></i>
+                    </div>
+                    <button type="submit" class="auth-submit-btn">Create Account <i class="fas fa-user-plus" style="margin-left:8px;"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="main-app" class="screen">
+        <div class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <nav class="sidebar" id="sidebar">
+            <div class="logo" style="margin-bottom: 2rem; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <i class="fas fa-prescription-bottle-alt" style="font-size: 2.5rem; color: #00f2fe; animation: float 3s ease-in-out infinite;"></i>
+                <span class="animated-logo" style="font-size: 1.4rem; text-align: center; line-height: 1.2;">Renuka<br>Medical</span>
+            </div>
+            <ul id="nav-menu">
+                <li data-target="dashboard" class="active"><i class="fas fa-chart-line"></i> Dashboard</li>
+                <li data-target="analytics" style="color:#f39c12; font-weight:bold;"><i class="fas fa-chart-line"></i> Sales Analytics</li>
+                <li data-target="anatomy" style="color:#ff6b6b; font-weight:bold;"><i class="fas fa-child"></i> Anatomy Map</li>
+                <li data-target="iot-coldchain" style="color:#00f2fe; font-weight:bold;"><i class="fas fa-snowflake"></i> IoT Cold Chain</li>
+                <li data-target="telemedicine" style="color:#4facfe; font-weight:bold;"><i class="fas fa-video"></i> Telemedicine</li>
+                <li data-target="drone" style="color:#f39c12; font-weight:bold;"><i class="fas fa-helicopter"></i> Drone Delivery</li>
+                <li data-target="growth" style="color:var(--secondary-color); font-weight:bold;"><i class="fas fa-chart-pie"></i> Growth & CRM</li>
+                <li data-target="billing"><i class="fas fa-cash-register"></i> Advanced POS</li>
+                <li data-target="inventory"><i class="fas fa-boxes"></i> Inventory</li>
+                <li data-target="qr-management"><i class="fas fa-qrcode"></i> QR Management</li>
+                <li data-target="patients"><i class="fas fa-user-injured"></i> Patients</li>
+                <li data-target="ai-assistant"><i class="fas fa-robot"></i> AI Assistant</li>
+                <li data-target="reports"><i class="fas fa-file-alt"></i> Reports</li>
+                <li id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</li>
+            </ul>
+        </nav>
+
+        <main class="content">
+            <!-- 3D Animated Canvas Background -->
+            <canvas id="dashboard-3d-canvas"></canvas>
+            <header class="top-header">
+                <div class="header-left" style="display:flex; align-items:center; gap:15px;">
+                    <i class="fas fa-heartbeat" style="color:var(--danger-color); font-size: 2rem; animation: restingHeartbeat 2s infinite;"></i>
+                    <h2 id="page-title">Advanced Dashboard</h2>
+                </div>
+                <div class="header-right" style="display:flex; align-items:center; gap:12px;">
+                    <select id="bg-selector" class="btn-secondary" onchange="changeBgTheme(this.value)" style="padding:6px 12px; font-size:0.85rem; background:rgba(255,255,255,0.1); border:1px solid var(--border-color); border-radius:20px; color:white; cursor:pointer;" title="Change Background Theme">
+                        <option value="ambient" style="background:#0f172a; color:white;">✨ Ambient Wave Mesh</option>
+                        <option value="deepspace" style="background:#0f172a; color:white;">🌌 Deep Space Studio</option>
+                        <option value="hospital" style="background:#0f172a; color:white;">🏥 Hospital Corridor</option>
+                        <option value="clean" style="background:#0f172a; color:white;">🔬 Minimal Clinical</option>
+                    </select>
+                    <button class="btn-secondary" onclick="openCmdPalette()" style="padding:6px 14px; font-size:0.85rem; background:rgba(255,255,255,0.1); border:1px solid var(--border-color); border-radius:20px; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-search"></i> <span>Search</span> <kbd style="background:rgba(255,255,255,0.2); padding:1px 6px; border-radius:4px; font-size:0.75rem;">Ctrl K</kbd>
+                    </button>
+                    <button id="theme-toggle-btn" class="btn-secondary" onclick="toggleAppTheme()" style="padding:8px 12px; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center;" title="Toggle Light/Dark Theme">
+                        <i class="fas fa-moon" id="theme-icon"></i>
+                    </button>
+                    <div class="user-info">
+                        <span id="display-role"></span> | <span id="display-username"></span>
+                    </div>
+                    <div class="notifications">
+                        <button class="notif-btn">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge" id="notif-count">0</span>
+                        </button>
+                        <div id="notif-dropdown" class="notif-dropdown hidden"></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="tab-content active">
+                <div class="dashboard-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
+                    <h2>📊 Advanced Analytics Dashboard</h2>
+                    <div style="display:flex; gap:0.5rem;">
+                        <select id="trend-days" style="padding:5px; border-radius:8px;">
+                            <option value="7">Last 7 days</option>
+                            <option value="30" selected>Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                        </select>
+                        <button id="refresh-dashboard" class="btn-primary" style="padding:5px 12px;"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-rupee-sign"></i></div><div class="kpi-content"><h3>Total Stock Value</h3><p class="kpi-value" id="total-stock-val">₹0.00</p><span id="stock-change">+0%</span></div></div>
+                    <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-exchange-alt"></i></div><div class="kpi-content"><h3>Inventory Turnover</h3><p class="kpi-value" id="turnover-rate">0.0</p><span>Last 30 days</span></div></div>
+                    <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-truck"></i></div><div class="kpi-content"><h3>Reorder Needed</h3><p class="kpi-value" id="reorder-count">0</p><span>critical</span></div></div>
+                    <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-hourglass-half"></i></div><div class="kpi-content"><h3>Avg. Expiry Days</h3><p class="kpi-value" id="avg-expiry-days">0</p><span>across inventory</span></div></div>
+                    <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-chart-line"></i></div><div class="kpi-content"><h3>Monthly Sales</h3><p class="kpi-value" id="total-sales-val">₹0.00</p><span id="sales-change">+0%</span></div></div>
+                    <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-percent"></i></div><div class="kpi-content"><h3>Est. Profit Margin</h3><p class="kpi-value" id="profit-margin">0.0%</p><span>based on 30% avg</span></div></div>
+                    <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="kpi-content"><h3>Low Stock Items</h3><p class="kpi-value" id="low-stock-count">0</p><span>alerts</span></div></div>
+                </div>
+                <div class="charts-grid">
+                    <div class="chart-card"><h3>📈 Sales Trend <span id="trend-period-label">(Last 30 days)</span></h3><canvas id="salesTrendChart"></canvas></div>
+                    <div class="chart-card"><h3>📊 Inventory by Category</h3><canvas id="categoryBarChart"></canvas></div>
+                </div>
+                <div class="charts-grid">
+                    <div class="chart-card"><h3>💰 Sales vs Profit (6 months)</h3><canvas id="salesProfitChart"></canvas></div>
+                    <div class="chart-card"><h3>📦 Stock Movement</h3><canvas id="stockMovementChart"></canvas></div>
+                </div>
+                <div class="widgets-grid">
+                    <div class="widget-card"><h3>🔄 Medicines to Reorder <button class="btn-primary" onclick="generatePO()" style="float:right; padding:4px 8px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Generate PO</button></h3><div id="reorder-list" class="transaction-list">Loading...</div></div>
+                    <div class="widget-card"><h3>📅 Expiry Heatmap (90 days)</h3><div id="expiry-heatmap" class="expiry-grid"></div></div>
+                    <div class="widget-card"><h3>🏭 Top Suppliers (by value)</h3><div id="supplier-performance" class="transaction-list"></div></div>
+                </div>
+                <div class="widgets-grid">
+                    <div class="widget-card"><h3>🕒 Recent Sales</h3><div id="recent-transactions" class="transaction-list"></div></div>
+                    <div class="widget-card"><h3>⚡ Quick Actions</h3><div style="display:flex; gap:10px; flex-wrap:wrap;"><button class="btn-primary" onclick="window.location.href='#inventory'"><i class="fas fa-boxes"></i> Stock</button><button class="btn-primary" onclick="window.location.href='#billing'"><i class="fas fa-file-invoice"></i> Invoice</button><button class="btn-secondary" id="export-dashboard-btn"><i class="fas fa-download"></i> Export</button></div></div>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h2><i class="fas fa-chart-line" style="color:#f39c12;"></i> Visual Sales Analytics</h2>
+                    <button class="btn-pro" onclick="loadAnalytics()"><i class="fas fa-sync"></i> Refresh Data</button>
+                </div>
+                <div style="background:white; border-radius:15px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.05); height: 400px; display:flex; justify-content:center; align-items:center;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Growth & CRM Section -->
+            <section id="growth" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
+                    <h2><i class="fas fa-chart-pie" style="color:var(--secondary-color);"></i> Business Growth & CRM</h2>
+                    <button class="btn-pro" onclick="sendPromoSMS()"><i class="fas fa-paper-plane"></i> Send Promo SMS</button>
+                </div>
+                
+                <div class="kpi-grid">
+                    <div class="kpi-card" style="border-left: 5px solid var(--secondary-color);">
+                        <div class="kpi-icon"><i class="fas fa-gem" style="color:var(--secondary-color);"></i></div>
+                        <div class="kpi-content"><h3>Active Loyalty Members</h3><p class="kpi-value">1,245</p><span style="color:var(--secondary-color);">+15% this month</span></div>
+                    </div>
+                    <div class="kpi-card" style="border-left: 5px solid var(--primary-color);">
+                        <div class="kpi-icon"><i class="fas fa-history" style="color:var(--primary-color);"></i></div>
+                        <div class="kpi-content"><h3>Refills Due Today</h3><p class="kpi-value" style="color:var(--primary-color);">28</p><span>Action Required</span></div>
+                    </div>
+                    <div class="kpi-card" style="border-left: 5px solid var(--danger-color);">
+                        <div class="kpi-icon"><i class="fas fa-skull-crossbones" style="color:var(--danger-color);"></i></div>
+                        <div class="kpi-content"><h3>Dead Stock Risk</h3><p class="kpi-value" style="color:var(--danger-color);">₹12,450</p><span>Capital tied up</span></div>
+                    </div>
+                </div>
+
+                <div class="widgets-grid">
+                    <div class="widget-card">
+                        <h3><i class="fas fa-bell" style="color:var(--warning-color);"></i> Smart Refill Reminders</h3>
+                        <div class="transaction-list">
+                            <div class="transaction-item" style="border-left: 3px solid var(--warning-color); padding-left:10px;">
+                                <div><strong>John Doe</strong><br>Metformin 500mg</div>
+                                <div><span style="color:var(--warning-color); font-weight:bold;">Due in 2 days</span><br><button class="btn-secondary" style="padding:2px 8px; font-size:0.8rem; margin-top:5px;"><i class="fab fa-whatsapp"></i> Notify</button></div>
+                            </div>
+                            <div class="transaction-item" style="border-left: 3px solid var(--danger-color); padding-left:10px;">
+                                <div><strong>Sarah Smith</strong><br>Amlodipine 5mg</div>
+                                <div><span style="color:var(--danger-color); font-weight:bold;">Overdue 1 day</span><br><button class="btn-secondary" style="padding:2px 8px; font-size:0.8rem; margin-top:5px;"><i class="fas fa-phone"></i> Call</button></div>
+                            </div>
+                            <div class="transaction-item" style="border-left: 3px solid var(--secondary-color); padding-left:10px;">
+                                <div><strong>Robert Johnson</strong><br>Atorvastatin 20mg</div>
+                                <div><span style="color:var(--secondary-color); font-weight:bold;">Refilled</span><br>Today</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="widget-card">
+                        <h3><i class="fas fa-star" style="color:gold;"></i> Top Loyalty Customers</h3>
+                        <div class="transaction-list">
+                            <div class="transaction-item">
+                                <div><strong>John Doe</strong><br>Gold Tier</div>
+                                <div><strong>4,500 pts</strong></div>
+                            </div>
+                            <div class="transaction-item">
+                                <div><strong>Mary Jane</strong><br>Silver Tier</div>
+                                <div><strong>2,100 pts</strong></div>
+                            </div>
+                            <div class="transaction-item">
+                                <div><strong>Peter Parker</strong><br>Bronze Tier</div>
+                                <div><strong>950 pts</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Inventory Section -->
+            
+                <div class="table-container" style="margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee;">
+                        <h3 style="margin:0;"><i class="fas fa-users"></i> Advanced Patient CRM</h3>
+                        <button class="btn-primary" onclick="loadPatientHistory()"><i class="fas fa-sync"></i> Sync Data</button>
+                    </div>
+                    <table class="data-table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th>Patient Name</th>
+                                <th>Loyalty Points</th>
+                                <th>Purchase History</th>
+                                <th>AI Suggestion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crm-patient-list">
+                            <tr><td colspan="4" style="text-align:center;">Click Sync Data to load...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            <section id="inventory" class="tab-content">
+                <div style="margin-bottom:1.5rem; background:linear-gradient(135deg, rgba(32,201,151,0.1) 0%, rgba(0,242,254,0.1) 100%); padding:15px; border-radius:15px; border-left:5px solid var(--secondary-color);">
+                    <h3 style="margin-top:0; color:var(--primary-color);"><i class="fas fa-brain"></i> AI Demand Forecasting</h3>
+                    <p style="margin-bottom:0;"><strong>Prediction:</strong> Paracetamol and Vitamin C sales are projected to increase by 40% next week due to seasonal flu trends. <button class="btn-primary" style="padding:4px 10px; font-size:0.8rem; margin-left:10px;" onclick="autoOrderPredicted()">Auto-Order Predicted Stock</button></p>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                    <h2>Medicine Inventory</h2>
+                    <button class="btn-primary" onclick="showModal('add-medicine-modal')"><i class="fas fa-plus"></i> Add Medicine</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="inventory-table">
+                        <thead><tr><th>Name</th><th>Batch</th><th>Category</th><th>Quantity</th><th>Box/Rack</th><th>Price (₹)</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- AI Assistant Section -->
+            <section id="ai-assistant" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h2><i class="fas fa-robot" style="color:var(--accent-color);"></i> AI Pharmacist Assistant</h2>
+                </div>
+                
+                <div class="billing-card" style="height: 65vh; display:flex; flex-direction:column; padding:1.5rem; background:rgba(15, 23, 42, 0.8); border-radius:20px;">
+                    <div id="ai-chat-history" style="flex:1; overflow-y:auto; padding:15px; background:rgba(15, 23, 42, 0.6); border-radius:15px; border:1px solid var(--border-color); margin-bottom:15px; display:flex; flex-direction:column; gap:15px;">
+                        <div style="align-self:flex-start; background:rgba(30, 41, 59, 0.8); padding:12px 18px; border-radius:15px 15px 15px 0; box-shadow:0 4px 15px rgba(0,0,0,0.2); max-width:80%; font-size:1.05rem; color: white;">
+                            <strong><i class="fas fa-robot" style="color:var(--secondary-color);"></i> AI Pharmacist:</strong> Hello! I am your advanced clinical assistant. You can ask me about medicine side effects, generic alternatives, or drug interactions. How can I help you today?
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="ai-chat-input" placeholder="Type your medical query here..." style="flex:1; padding:15px; border-radius:12px; border:2px solid var(--border-color); font-size:1.05rem; outline:none; transition:0.3s;" onfocus="this.style.borderColor='var(--secondary-color)'" onblur="this.style.borderColor='var(--border-color)'" onkeypress="if(event.key==='Enter') sendAIChat()">
+                        <button class="btn-pro" onclick="sendAIChat()" style="padding:10px 30px; font-size:1.05rem; border-radius:12px;"><i class="fas fa-paper-plane"></i> Send</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Anatomy Map Section -->
+            <section id="anatomy" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h2><i class="fas fa-child" style="color:#ff6b6b;"></i> Interactive Human Anatomy</h2>
+                    <p style="color:var(--text-light);">Select a body region to filter medicines</p>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; height:65vh;">
+                    <div style="background:rgba(15, 23, 42, 0.8); border-radius:20px; padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); position:relative;">
+                        <!-- SVG Stickman/Body Placeholder -->
+                        <div style="position:relative; width:150px; height:400px; border:2px dashed #cbd5e1; border-radius:75px;">
+                            <div class="anatomy-zone" onclick="filterAnatomy('head')" style="position:absolute; top:5%; left:25%; width:50%; height:15%; border-radius:50%; background:rgba(255,107,107,0.2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; transition:0.3s;" onmouseover="this.style.background='rgba(255,107,107,0.5)'" onmouseout="this.style.background='rgba(255,107,107,0.2)'">Head</div>
+                            <div class="anatomy-zone" onclick="filterAnatomy('heart')" style="position:absolute; top:25%; left:35%; width:30%; height:15%; border-radius:50%; background:rgba(255,107,107,0.2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; transition:0.3s;" onmouseover="this.style.background='rgba(255,107,107,0.5)'" onmouseout="this.style.background='rgba(255,107,107,0.2)'">Heart</div>
+                            <div class="anatomy-zone" onclick="filterAnatomy('lungs')" style="position:absolute; top:25%; left:10%; width:20%; height:20%; border-radius:50%; background:rgba(0,242,254,0.2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; transition:0.3s;" onmouseover="this.style.background='rgba(0,242,254,0.5)'" onmouseout="this.style.background='rgba(0,242,254,0.2)'">Lungs</div>
+                            <div class="anatomy-zone" onclick="filterAnatomy('stomach')" style="position:absolute; top:45%; left:25%; width:50%; height:15%; border-radius:50%; background:rgba(255,213,79,0.2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; transition:0.3s;" onmouseover="this.style.background='rgba(255,213,79,0.5)'" onmouseout="this.style.background='rgba(255,213,79,0.2)'">Stomach</div>
+                            <div class="anatomy-zone" onclick="filterAnatomy('joints')" style="position:absolute; top:65%; left:20%; width:60%; height:30%; border-radius:20px; background:rgba(46,213,115,0.2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; transition:0.3s;" onmouseover="this.style.background='rgba(46,213,115,0.5)'" onmouseout="this.style.background='rgba(46,213,115,0.2)'">Joints</div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(15, 23, 42, 0.8); border-radius:20px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.2); overflow-y:auto; color: white;">
+                        <h3 id="anatomy-title">Select a region to diagnose</h3>
+                        <div id="anatomy-symptom-box" style="display:none; margin-bottom:15px;">
+                            <label style="color:#a7f3d0; font-size:0.9rem;">What is the specific symptom?</label>
+                            <div style="display:flex; gap:10px; margin-top:5px;">
+                                <input type="text" id="anatomy-symptom-input" placeholder="e.g. sharp pain, migraine, acid reflux..." style="flex:1; padding:10px; border-radius:8px; border:none; outline:none;">
+                                <button class="btn-pro" onclick="analyzeAnatomySymptom()" style="padding:10px 15px; border-radius:8px;"><i class="fas fa-search-medical"></i> Analyze</button>
+                            </div>
+                        </div>
+                        <div id="anatomy-results" style="display:flex; flex-direction:column; gap:10px;">
+                            <!-- Results inject here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Telemedicine Section -->
+            
+            <section id="iot-coldchain" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h2><i class="fas fa-snowflake" style="color:#00f2fe;"></i> IoT Cold Chain Monitor</h2>
+                    <span id="iot-alert-badge" style="background:#2ed573; color:#1e293b; padding:5px 15px; border-radius:20px; font-weight:bold;"><i class="fas fa-check-circle"></i> SYSTEM NORMAL</span>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card" style="border-left:4px solid #00f2fe;">
+                        <h3>Vaccine Fridge A</h3>
+                        <div class="value" id="iot-temp-a" style="font-size:2rem; font-weight:bold; color:white;">4.2°C</div>
+                        <div class="trend positive">Target: 2°C - 8°C</div>
+                    </div>
+                    <div class="kpi-card" style="border-left:4px solid #00f2fe;">
+                        <h3>Insulin Fridge B</h3>
+                        <div class="value" id="iot-temp-b" style="font-size:2rem; font-weight:bold; color:white;">5.1°C</div>
+                        <div class="trend positive">Target: 2°C - 8°C</div>
+                    </div>
+                </div>
+                <div class="table-container" style="margin-top:20px; padding:20px; background:rgba(15, 23, 42, 0.8);">
+                    <h3>Temperature History Graph (Live)</h3>
+                    <div style="height:300px; display:flex; align-items:flex-end; gap:5px; border-bottom:2px solid #334155; padding-bottom:5px;" id="iot-graph-container">
+                        <!-- Dynamic bars go here -->
+                    </div>
+                </div>
+            </section>
+
+            <section id="telemedicine" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h2><i class="fas fa-video" style="color:#4facfe;"></i> Telemedicine Consult</h2>
+                </div>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; height:65vh;">
+                    <div style="background:black; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(0,0,0,0.1); position:relative; overflow:hidden;">
+                        <img id="tele-video" src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=800" style="width:100%; height:100%; object-fit:cover; opacity:0.1; transition:1s;">
+                        <div id="tele-overlay" style="position:absolute; display:flex; flex-direction:column; align-items:center; color:white;">
+                            <i class="fas fa-user-md" style="font-size:4rem; margin-bottom:20px;"></i>
+                            <h3 id="tele-status">Doctor Offline</h3>
+                            <button class="btn-pro" onclick="startTelemedicine()" id="tele-connect-btn" style="margin-top:20px; padding:10px 30px;"><i class="fas fa-phone"></i> Connect Now</button>
+                        </div>
+                    </div>
+                    <div style="background:white; border-radius:20px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.05); display:flex; flex-direction:column; gap:15px;">
+                        <h3>Digital Prescription Request</h3>
+                        <div class="form-group"><label>Patient Symptoms</label><textarea rows="3" placeholder="e.g. Fever, cough for 3 days" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;"></textarea></div>
+                        <div class="form-group"><label>Doctor Recommendation</label><div style="padding:10px; background:#f1f5f9; border-radius:8px; min-height:80px;" id="tele-rx-result">Awaiting consult...</div></div>
+                        <button class="btn-primary" onclick="autoBillPrescription()"><i class="fas fa-file-prescription"></i> Auto-Bill Prescription</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Drone Delivery Section -->
+            <section id="drone" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h2><i class="fas fa-helicopter" style="color:#f39c12;"></i> Real-Time Drone Delivery</h2>
+                    <button class="btn-primary" onclick="launchDrone()"><i class="fas fa-space-shuttle"></i> Launch Delivery Drone</button>
+                </div>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; height:65vh;">
+                    <div style="background:#1e293b; border-radius:20px; position:relative; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
+                        <div style="position:absolute; top:20px; left:20px; background:rgba(0,0,0,0.6); color:white; padding:10px 20px; border-radius:10px; z-index:10;">
+                            <h4><i class="fas fa-satellite-dish"></i> GPS Tracker Active</h4>
+                            <p style="margin-top:5px; color:#a7f3d0;">Status: En Route to Patient</p>
+                        </div>
+                        <img src="https://images.unsplash.com/photo-1524143986875-3b098d78b363?auto=format&fit=crop&q=80&w=1200" style="width:100%; height:100%; object-fit:cover; opacity:0.8; filter: contrast(1.2) saturate(1.5);">
+                        <!-- Radar pulse effect -->
+                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);">
+                            <div style="width:20px; height:20px; background:#f39c12; border-radius:50%; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); z-index:5;"></div>
+                            <div style="width:100px; height:100px; border:2px solid #f39c12; border-radius:50%; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); animation: radar 2s infinite;"></div>
+                            <div style="width:200px; height:200px; border:2px solid #f39c12; border-radius:50%; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); animation: radar 2s infinite; animation-delay: 0.5s;"></div>
+                        </div>
+                    </div>
+                    <div style="background:white; border-radius:20px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.05); display:flex; flex-direction:column; gap:15px;">
+                        <h3>Active Deliveries</h3>
+                        <div style="background:#f8fafc; padding:15px; border-radius:10px; border-left:4px solid #f39c12;">
+                            <h4 style="margin:0;">Order #RX-8992</h4>
+                            <p style="margin:5px 0 0 0; color:#64748b; font-size:0.9rem;">Patient: Rajesh Kumar</p>
+                            <p style="margin:5px 0 0 0; color:#64748b; font-size:0.9rem;">Items: Insulin, Needles</p>
+                            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:#10b981; font-weight:bold;"><i class="fas fa-tachometer-alt"></i> 65 km/h</span>
+                                <span style="color:#ef4444; font-weight:bold;"><i class="fas fa-clock"></i> 4 mins away</span>
+                            </div>
+                        </div>
+                        <div style="background:#f8fafc; padding:15px; border-radius:10px; border-left:4px solid #94a3b8; opacity:0.6;">
+                            <h4 style="margin:0;">Order #RX-8991</h4>
+                            <p style="margin:5px 0 0 0; color:#64748b; font-size:0.9rem;">Status: Delivered</p>
+                        </div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes radar {
+                        0% { width: 0; height: 0; opacity: 1; }
+                        100% { width: 300px; height: 300px; opacity: 0; }
+                    }
+                </style>
+            </section>
+
+            <!-- Billing Section -->
+            <section id="billing" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
+                    <h2 style="margin:0;">Advanced POS Billing</h2>
+                    <div class="smart-tools" style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-pro" id="smart-scan-btn" onclick="openSmartScan()" style="padding:10px 15px; font-size:0.9rem; border-radius:12px; background:linear-gradient(135deg, #11998e 0%, #38ef7d 100%);"><i class="fas fa-camera"></i> Smart Scan</button>
+                        <button class="btn-pro" id="ocr-upload-btn" onclick="document.getElementById('ocr-file').click()" style="padding:10px 15px; font-size:0.9rem; border-radius:12px; background:linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%);"><i class="fas fa-file-prescription"></i> AI Vision Upload</button>
+                        <input type="file" id="ocr-file" accept="image/*" style="display:none;" onchange="processOCR(this)">
+                    </div>
+                </div>
+                <div class="billing-card" style="background:white; border-radius:15px; padding:1.5rem; display: grid; gap: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group"><label>Patient Name</label><input type="text" id="customer-name" placeholder="Walk-in Patient" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></div>
+                        <div class="form-group">
+                            <label>Patient Phone <span style="color:#2ecc71;font-size:0.8rem;">(Earns Loyalty Points)</span></label>
+                            <div style="display:flex; gap:5px;">
+                                <input type="text" id="customer-phone" placeholder="e.g. 9876543210" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                                <button class="btn-pro" onclick="checkLoyaltyPoints()" style="padding:0 10px; border-radius:4px;"><i class="fas fa-gift"></i> Check</button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Doctor Name</label><input type="text" id="doctor-name" placeholder="Dr. Smith" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></div>
+                        <div class="form-group"><label>Patient Allergies / Conditions (For AI Check)</label><input type="text" id="patient-allergies" placeholder="e.g. Peanut allergy, Asthma, Pregnant" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></div>
+                        
+                        <div class="form-group"><label>Discount (₹)</label><input type="number" id="discount-amount" value="0.00" min="0" step="0.50" onchange="window.updateInvoiceTotal()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></div>
+                        
+                        <div class="form-group">
+                            <label>Redeem Loyalty Points</label>
+                            <div style="display:flex; gap:5px;">
+                                <input type="number" id="redeem-points" value="0" min="0" onchange="window.updateInvoiceTotal()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                                <div style="padding:8px; background:#f1f5f9; border-radius:4px; font-weight:bold; color:#2ecc71;">Avail: <span id="avail-points">0</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group"><label>Payment Method</label>
+                            <select id="payment-method" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                                <option value="Cash">Cash</option>
+                                <option value="Card">Card</option>
+                                <option value="UPI">UPI</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="invoice-items" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;"></div>
+                    <button class="btn-secondary" style="width: max-content;" onclick="addInvoiceItem()"><i class="fas fa-plus"></i> Add Medicine</button>
+                    
+                    <div id="ai-interaction-warning" style="display:none; padding:15px; margin-top:10px; background:rgba(231, 76, 60, 0.1); border: 2px solid #e74c3c; border-radius:8px; color: #e74c3c; font-weight:bold;">
+                        <i class="fas fa-exclamation-triangle"></i> <span id="ai-warning-text"></span>
+                    </div>
+                    
+                    <div style="display:flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; border-top: 2px dashed var(--border-color); padding-top: 15px;">
+                        <div id="voiceFeedback" class="voice-feedback"></div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.9rem; color: #666;">Subtotal: ₹<span id="invoice-subtotal">0.00</span></div>
+                            <div style="font-size: 0.9rem; color: #666;">GST (18%): ₹<span id="invoice-gst-display">0.00</span></div>
+                            <div style="font-size: 0.9rem; color: #2ecc71;">Loyalty Used: -₹<span id="invoice-loyalty-display">0.00</span></div>
+                            <div style="font-size: 0.9rem; color: #e74c3c;">Discount: -₹<span id="invoice-discount-display">0.00</span></div>
+                            <div class="total-display" id="total-display-container" style="font-size: 1.5rem; color: var(--primary-dark); font-weight: bold;">Grand Total: ₹<span id="invoice-total">0.00</span></div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                        <button class="btn-secondary" style="flex:1; padding: 1rem; font-size: 1.1rem; background-color: #f39c12;" onclick="holdCurrentBill()"><i class="fas fa-pause"></i> Hold</button>
+                        <button class="btn-secondary" style="flex:1; padding: 1rem; font-size: 1.1rem; background-color: #34495e;" onclick="resumeHeldBill()"><i class="fas fa-play"></i> Resume (<span id="held-bill-count">0</span>)</button>
+                        <button class="btn-pro" style="flex:1.5; padding: 1rem; font-size: 1.1rem; background: linear-gradient(135deg, #e74c3c, #c0392b);" onclick="checkAIInteractions()"><i class="fas fa-shield-virus"></i> AI Check</button>
+                        <button class="btn-secondary" style="flex:1.5; padding: 1rem; font-size: 1.1rem; background: linear-gradient(135deg, #059669, #10b981);" onclick="printThermalReceipt()"><i class="fas fa-receipt"></i> 80mm Receipt</button>
+                        <button class="btn-primary btn-checkout" style="flex:2; padding: 1rem; font-size: 1.1rem;" onclick="generateInvoice()"><i class="fas fa-file-invoice-dollar"></i> PDF Invoice</button>
+                    </div>
+                </div>
+            </section>
+            <!-- QR Management with Enhanced OCR -->
+            <section id="qr-management" class="tab-content">
+                <h2>QR & Stock Management</h2>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(350px,1fr)); gap:1.5rem;">
+                    
+                    <!-- Smart QR Scanner -->
+                    <div style="background:rgba(15, 23, 42, 0.6); border-radius:15px; padding:1.5rem; border-left: 5px solid var(--secondary-color); box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                        <h3><i class="fas fa-camera" style="color:var(--secondary-color);"></i> Smart Barcode Scanner</h3>
+                        <p>Scan medicine boxes using your webcam.</p>
+                        <button class="btn-pro" onclick="openSmartScan()" style="margin-top:10px;"><i class="fas fa-qrcode"></i> Open Scanner</button>
+                    </div>
+
+                    <!-- Manual JSON Entry -->
+                    <div style="background:rgba(15, 23, 42, 0.6); border-radius:15px; padding:1.5rem; border-left: 5px solid var(--primary-color); box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                        <h3><i class="fas fa-code" style="color:var(--primary-color);"></i> Manual QR / JSON Data</h3>
+                        <p>Paste vendor JSON data directly here.</p>
+                        <textarea id="manual-qr-data" rows="3" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; margin-top:10px;" placeholder='[{"name":"Aspirin", "quantity":100, ...}]'></textarea>
+                        <button class="btn-primary" onclick="updateStockFromJson()" style="margin-top:10px;"><i class="fas fa-cloud-upload-alt"></i> Update Stock</button>
+                    </div>
+
+                    <!-- AI Magic Bill Scanner -->
+                    <div style="background:rgba(15, 23, 42, 0.6); border-radius:15px; padding:1.5rem; border: 2px solid #9b59b6; box-shadow:0 4px 15px rgba(155, 89, 182, 0.3); grid-column: 1 / -1;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="color: #8e44ad;"><i class="fas fa-magic"></i> AI Magic Bill Scanner</h3>
+                        </div>
+                        <div style="border: 2px dashed #9b59b6; border-radius: 10px; padding: 30px; text-align: center; background: rgba(155, 89, 182, 0.1); cursor: pointer;" onclick="document.getElementById('billPhotoInput').click()">
+                            <i class="fas fa-camera" id="billCameraIcon" style="font-size: 3rem; color: #9b59b6; margin-bottom: 10px;"></i>
+                            <h4 id="billCameraText" style="color: #8e44ad;">Click to Snap or Upload Bill Photo</h4>
+                            <p style="font-size: 0.8rem; color: #7f8c8d;">Perfectly reads complex paper bills</p>
+                            <input type="file" id="billPhotoInput" accept="image/*" capture="environment" style="display: none;" onchange="processBillImage(this)">
+                        </div>
+
+                        <!-- Data Preview Container -->
+                        <div id="excelPreviewContainer" style="display:none; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+                            <h3 style="color:var(--primary-dark);"><i class="fas fa-robot"></i> AI Extracted Data Preview</h3>
+                            <div style="overflow-x:auto;">
+                                <table class="inventory-table">
+                                    <thead><tr><th>Name</th><th>Quantity</th><th>Price</th></tr></thead>
+                                    <tbody id="excelPreviewBody"></tbody>
+                                </table>
+                            </div>
+                            <div style="text-align:right; margin-top:15px;">
+                                <button class="btn-primary" id="confirmExcelBtn" style="padding: 1rem 2rem; font-size: 1.1rem; background-color: #2ecc71; border-color: #27ae60;">
+                                    <i class="fas fa-check-circle"></i> Confirm & Update Stock
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI Assistant Section -->
+            <section id="ai-assistant" class="tab-content">
+                <h2>🧠 AI Health Assistant</h2>
+                <div class="ai-grid">
+                    <div class="ai-card">
+                        <h3><i class="fas fa-pills"></i> Drug Interaction Checker</h3>
+                        <div class="form-group"><label>Medicine 1</label><select id="med1" class="ai-select"></select></div>
+                        <div class="form-group"><label>Medicine 2</label><select id="med2" class="ai-select"></select></div>
+                        <button class="btn-primary" onclick="checkInteraction()"><i class="fas fa-shield-alt"></i> Check Interaction</button>
+                        <div id="interaction-result" class="ai-result"></div>
+                    </div>
+                    <div class="ai-card">
+                        <h3><i class="fas fa-weight-hanging"></i> Dosage Recommender</h3>
+                        <div class="form-group"><label>Medicine Name</label><input type="text" id="dosage-med" placeholder="e.g., Paracetamol"></div>
+                        <div class="form-group"><label>Patient Age (years)</label><input type="number" id="patient-age" value="30"></div>
+                        <div class="form-group"><label>Weight (kg)</label><input type="number" id="patient-weight" value="70"></div>
+                        <button class="btn-primary" onclick="recommendDosage()"><i class="fas fa-capsules"></i> Get Dosage</button>
+                        <div id="dosage-result" class="ai-result"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Suppliers, Sales, Reports -->
+            <section id="suppliers" class="tab-content"><h2>Suppliers</h2><div id="supplier-list"></div><button class="btn-primary" onclick="showAddSupplierModal()">+ Add Supplier</button>
+<button class="btn-primary" onclick="triggerAutoBid()" style="margin-left:10px; background:linear-gradient(135deg, #f9ca24, #f0932b);"><i class="fas fa-gavel"></i> AI Auto-Bid Suppliers</button>
+</section>
+            <section id="sales" class="tab-content"><h2>Sales History</h2><div class="table-container"><table class="data-table" id="sales-table"><thead><tr><th>ID</th><th>Customer</th><th>Amount</th><th>Date</th></tr></thead><tbody></tbody></table></div></section>
+            <section id="reports" class="tab-content">
+                <h2>Reports & Reordering</h2>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn-report" onclick="exportReport('inventory')"><i class="fas fa-file-pdf"></i> Inventory PDF</button>
+                    <button class="btn-report" onclick="exportReport('sales')"><i class="fas fa-file-excel"></i> Sales Excel</button>
+                    <button class="btn-pro" onclick="generatePurchaseOrder()" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);"><i class="fas fa-file-invoice"></i> Auto-Generate Purchase Order (PDF)</button>
+                </div>
+            </section>
+            
+            <section id="patients" class="tab-content">
+                <h2>Patient & Prescription Management</h2>
+                <div class="table-container">
+                    <table class="data-table" id="patients-table">
+                        <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Medical History</th><th>Registered</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="staff" class="tab-content">
+                <h2>Staff & Role Management</h2>
+                <div class="table-container">
+                    <table class="data-table" id="staff-table">
+                        <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Actions</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="add-medicine-modal" class="modal">
+        <div class="modal-content">
+            <h3>Add Medicine</h3>
+            <form id="add-medicine-form">
+                <input type="text" id="add-name" placeholder="Medicine Name" required>
+                <input type="text" id="add-batch" placeholder="Batch Number">
+                <input type="text" id="add-box" placeholder="Box/Rack Number (e.g. A12)">
+                <input type="text" id="add-category" placeholder="Category (e.g. Painkiller)">
+                <input type="number" id="add-quantity" placeholder="Quantity" required>
+                <input type="number" id="add-price" step="0.01" placeholder="Price" required>
+                <input type="date" id="add-expiry" required>
+                <div class="modal-actions"><button type="button" onclick="closeModal('add-medicine-modal')">Cancel</button><button type="submit">Save</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-medicine-modal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Medicine</h3>
+            <form id="edit-medicine-form">
+                <input type="text" id="edit-name" placeholder="Medicine Name" required>
+                <input type="text" id="edit-batch" placeholder="Batch Number">
+                <input type="text" id="edit-box" placeholder="Box/Rack Number">
+                <input type="text" id="edit-category" placeholder="Category">
+                <input type="number" id="edit-quantity" placeholder="Quantity" required>
+                <input type="number" id="edit-price" step="0.01" required>
+                <input type="date" id="edit-expiry" required>
+                <div class="modal-actions"><button type="button" onclick="closeModal('edit-medicine-modal')">Cancel</button><button type="submit">Update</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="scanner-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center; border-radius: 20px;">
+            <span class="close" onclick="closeSmartScan()">&times;</span>
+            <h2 style="color:var(--primary-color); margin-bottom:1rem;"><i class="fas fa-camera"></i> Smart Scanner</h2>
+            <div id="scanner-reader" style="width: 100%; border-radius:15px; overflow:hidden; border: 3px solid var(--secondary-color);"></div>
+        </div>
+    </div>
+
+    <!-- Command Palette (Ctrl+K) Modal -->
+    <div id="cmd-palette-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px; border-radius: 20px; padding: 1.5rem; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); border: 1px solid var(--primary-color);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3 style="color:var(--primary-color);"><i class="fas fa-terminal"></i> Command Palette</h3>
+                <span class="close" onclick="closeCmdPalette()">&times;</span>
+            </div>
+            <input type="text" id="cmd-input" placeholder="Type a command or search medicine (e.g., 'pos', 'inventory', 'paracetamol')..." style="width:100%; padding:12px 16px; border-radius:10px; border:2px solid var(--primary-color); background:rgba(255,255,255,0.05); color:white; font-size:1.1rem;" oninput="filterCmdList()">
+            <div id="cmd-results" style="margin-top:1rem; max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+    </div>
+
+    <!-- Thermal 80mm Receipt Modal -->
+    <div id="thermal-receipt-modal" class="modal">
+        <div class="modal-content" style="max-width: 420px; border-radius: 15px; padding: 1.5rem; background: #fff; color: #000;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px dashed #000; padding-bottom:10px; margin-bottom:10px;">
+                <h3 style="color:#000;"><i class="fas fa-receipt"></i> Thermal Receipt (80mm)</h3>
+                <span class="close" onclick="closeModal('thermal-receipt-modal')" style="color:#000;">&times;</span>
+            </div>
+            <pre id="thermal-receipt-content" style="font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; line-height: 1.2; white-space: pre-wrap; color: #000; background: #f8fafc; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; max-height: 400px; overflow-y: auto;"></pre>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn-primary" style="flex:1;" onclick="printThermalWindow()"><i class="fas fa-print"></i> Print to Thermal Printer</button>
+                <button class="btn-secondary" style="flex:1;" onclick="closeModal('thermal-receipt-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let inventoryData = [];
+        let editId = null;
+
+        // --- JWT Token Management ---
+        function authHeaders() {
+            const token = localStorage.getItem('jwt_token');
+            return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+        }
+        function authHeadersMultipart() {
+            const token = localStorage.getItem('jwt_token');
+            return token ? { 'Authorization': 'Bearer ' + token } : {};
+        }
+
+        /* --- Auth Tab Switcher --- */
+        function switchAuth(mode) {
+            document.getElementById('form-login').classList.toggle('active', mode === 'login');
+            document.getElementById('form-signup').classList.toggle('active', mode === 'signup');
+            document.getElementById('btn-show-login').classList.toggle('active', mode === 'login');
+            document.getElementById('btn-show-signup').classList.toggle('active', mode === 'signup');
+        }
+
+        async function loadInventory() {
+            const res = await fetch(`${API_BASE}/inventory`, { headers: authHeaders() });
+            const data = await res.json();
+            inventoryData = data;
+            const tbody = document.querySelector('#inventory-table tbody');
+            tbody.innerHTML = data.map(m=>`<tr><td>${m.name}</td><td><span style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">${m.batch_number||'N/A'}</span></td><td>${m.category||'N/A'}</td><td>${m.quantity}</td><td><span style="background:#e2e8f0; padding:2px 8px; border-radius:12px; font-weight:bold; color:var(--primary-color);">${m.box_number||'Unassigned'}</span></td><td>₹${m.price}</td><td>${m.expiry_date}</td><td><span class="status-pill ${m.quantity<=10?'status-low':'status-good'}">${m.quantity<=10?'Low Stock':'In Stock'}</span></td><td><button class="btn-primary" onclick="editMedicine(${m.id})">Edit</button> <button class="btn-secondary" onclick="deleteMedicine(${m.id})">Delete</button></td></tr>`).join('');
+        }
+
+        document.getElementById('add-medicine-form').addEventListener('submit', async(e)=>{
+            e.preventDefault();
+            const body = {
+                name: document.getElementById('add-name').value,
+                batch_number: document.getElementById('add-batch').value,
+                box_number: document.getElementById('add-box').value,
+                category: document.getElementById('add-category').value,
+                quantity: document.getElementById('add-quantity').value,
+                price: document.getElementById('add-price').value,
+                expiry_date: document.getElementById('add-expiry').value
+            };
+            await fetch(`${API_BASE}/inventory`,{method:'POST',headers:authHeaders(),body:JSON.stringify(body)});
+            closeModal('add-medicine-modal');
+            loadInventory();
+        });
+
+        window.editMedicine = async (id) => {
+            const m = inventoryData.find(m=>m.id==id);
+            if(m){
+                editId=id;
+                document.getElementById('edit-name').value = m.name;
+                document.getElementById('edit-batch').value = m.batch_number;
+                document.getElementById('edit-box').value = m.box_number || '';
+                document.getElementById('edit-category').value = m.category;
+                document.getElementById('edit-quantity').value = m.quantity;
+                document.getElementById('edit-price').value = m.price;
+                document.getElementById('edit-expiry').value = m.expiry_date;
+                showModal('edit-medicine-modal');
+            }
+        };
+
+        document.getElementById('edit-medicine-form').addEventListener('submit', async(e)=>{
+            e.preventDefault();
+            const body = {
+                name: document.getElementById('edit-name').value,
+                batch_number: document.getElementById('edit-batch').value,
+                box_number: document.getElementById('edit-box').value,
+                category: document.getElementById('edit-category').value,
+                quantity: document.getElementById('edit-quantity').value,
+                price: document.getElementById('edit-price').value,
+                expiry_date: document.getElementById('edit-expiry').value
+            };
+            await fetch(`${API_BASE}/inventory/${editId}`,{method:'PUT',headers:authHeaders(),body:JSON.stringify(body)});
+            closeModal('edit-medicine-modal');
+            loadInventory();
+        });
+
+        window.addInvoiceItem = function(name='', qty=1, price=0, batch='', expiry='') {
+            const container = document.getElementById('invoice-items');
+            const div = document.createElement('div');
+            div.className = 'invoice-item-row animate-slide-up';
+            div.style.cssText = "display: flex; gap: 10px; align-items: center; background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; margin-bottom: 8px; position: relative;";
+            div.innerHTML = `
+                <input type="text" class="item-name" placeholder="Medicine" style="width: 30%;">
+                <input type="text" class="item-batch" placeholder="Batch" style="width: 15%;">
+                <input type="text" class="item-expiry" placeholder="Expiry" style="width: 15%;">
+                <input type="number" class="item-qty" placeholder="Qty" value="1" min="1" style="width: 10%;">
+                <input type="number" class="item-price" placeholder="Rate" step="0.01" style="width: 10%;">
+                <span class="row-total" style="width: 15%; font-weight: bold; text-align:right;">₹0.00</span>
+                <i class="fas fa-trash remove-item" title="Remove" style="color: #ff6b6b; cursor: pointer; margin-left: 10px;" onclick="this.parentElement.remove(); window.updateInvoiceTotal();"></i>
+                <ul class="autocomplete-dropdown" style="display:none;"></ul>
+            `;
+            container.appendChild(div);
+            
+            const nameInput = div.querySelector('.item-name');
+            const batchInput = div.querySelector('.item-batch');
+            const expiryInput = div.querySelector('.item-expiry');
+            const dropdown = div.querySelector('.autocomplete-dropdown');
+            const qtyInput = div.querySelector('.item-qty');
+            const priceInput = div.querySelector('.item-price');
+
+            nameInput.addEventListener('input', function() {
+                const val = this.value.toLowerCase();
+                if(val.length < 2) { dropdown.style.display = 'none'; return; }
+                const matches = inventoryData.filter(m => m.name.toLowerCase().includes(val));
+                dropdown.innerHTML = matches.map(m => {
+                    const fefoBadge = (m.fefo_discount && m.fefo_discount > 0) ? `<span style="background:#ef4444; color:white; padding:1px 5px; border-radius:4px; font-size:0.7rem; margin-left:5px;">🔥 ${m.fefo_discount}% FEFO Clearance</span>` : '';
+                    return `
+                    <li data-id="${m.id}" data-name="${m.name}" data-price="${m.price}" data-batch="${m.batch_number||''}" data-expiry="${m.expiry_date||''}" data-category="${m.category||''}" data-fefodiscount="${m.fefo_discount||0}" style="background: rgba(15, 23, 42, 0.9);">
+                        <span class="ac-name" style="color: #00f2fe;">${m.name} ${fefoBadge}</span>
+                        <div class="ac-details">
+                            <span>Batch: ${m.batch_number||'N/A'}</span>
+                            <span>Stock: ${m.quantity}</span>
+                            <span>₹${m.price}</span>
+                        </div>
+                    </li>
+                `}).join('');
+                dropdown.style.display = 'block';
+            });
+                            <span style="background: rgba(255,255,255,0.1); color: white;">Batch: ${m.batch_number||'N/A'}</span>
+                            <span style="background: rgba(255,71,87,0.2); color:#ff4757; font-weight:bold;">Stock: ${m.quantity}</span>
+                        </div>
+                    </li>`).join('');
+                dropdown.style.display = 'block';
+            });
+
+            dropdown.addEventListener('click', function(e) {
+                const li = e.target.closest('li');
+                if(!li) return;
+                
+                const category = (li.dataset.category || '').toLowerCase();
+                const name = (li.dataset.name || '').toLowerCase();
+                if (category.includes('sleep') || category.includes('sedative') || name.includes('sleep')) {
+                    const hasPrescription = confirm(`⚠️ PRESCRIPTION REQUIRED\n\n${li.dataset.name} is a restricted medicine (Sleeping Tablet/Sedative).\n\nDo you have a valid doctor's prescription for this item? Click OK if Yes, Cancel if No.`);
+                    if (!hasPrescription) {
+                        dropdown.style.display = 'none';
+                        nameInput.value = '';
+                        return;
+                    }
+                }
+                
+                nameInput.value = li.dataset.name;
+                priceInput.value = li.dataset.price;
+                batchInput.value = li.dataset.batch;
+                expiryInput.value = li.dataset.expiry;
+                dropdown.style.display = 'none';
+                window.updateInvoiceTotal();
+            });
+
+            qtyInput.addEventListener('input', window.updateInvoiceTotal);
+            priceInput.addEventListener('input', window.updateInvoiceTotal);
+            
+            if(name) {
+                nameInput.value = name;
+                qtyInput.value = qty;
+                priceInput.value = price;
+                batchInput.value = batch || '';
+                expiryInput.value = expiry || '';
+            }
+        };
+
+        window.updateInvoiceTotal = function() {
+            let subtotal = 0;
+            document.querySelectorAll('.invoice-item-row').forEach(row => {
+                const q = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const p = parseFloat(row.querySelector('.item-price').value) || 0;
+                const rTot = q * p;
+                row.querySelector('.row-total').innerText = '₹' + rTot.toFixed(2);
+                subtotal += rTot;
+            });
+            const subtotalEl = document.getElementById('invoice-subtotal');
+            if (subtotalEl) subtotalEl.innerText = subtotal.toFixed(2);
+            
+            // GST calculation (18%)
+            const gst = subtotal * 0.18;
+            const gstDisplay = document.getElementById('invoice-gst-display');
+            if (gstDisplay) gstDisplay.innerText = gst.toFixed(2);
+            
+            const discount = parseFloat(document.getElementById('discount-amount')?.value) || 0;
+            const discountDisplay = document.getElementById('invoice-discount-display');
+            if (discountDisplay) discountDisplay.innerText = discount.toFixed(2);
+            
+            const loyaltyRedeemed = parseFloat(document.getElementById('redeem-points')?.value) || 0;
+            const loyaltyDisplay = document.getElementById('invoice-loyalty-display');
+            if (loyaltyDisplay) loyaltyDisplay.innerText = loyaltyRedeemed.toFixed(2);
+            
+            const grandTotalEl = document.getElementById('invoice-total');
+            if (grandTotalEl) grandTotalEl.innerText = (subtotal + gst - discount - loyaltyRedeemed).toFixed(2);
+        };
+        
+        window.checkLoyaltyPoints = async function() {
+            const phone = document.getElementById('customer-phone').value.trim();
+            if (!phone) { alert("Enter phone number first"); return; }
+            const res = await fetch(`${API_BASE}/loyalty/${phone}`, { headers: authHeaders() });
+            const data = await res.json();
+            document.getElementById('avail-points').innerText = data.points || 0;
+            document.getElementById('redeem-points').max = data.points || 0;
+            alert(`Customer has ${data.points || 0} points available.`);
+        };
+        
+        window.checkAIInteractions = async function() {
+            const allergies = document.getElementById('patient-allergies').value.trim();
+            const items = [];
+            document.querySelectorAll('.invoice-item-row').forEach(row => {
+                const name = row.querySelector('.item-name').value.trim();
+                if(name) items.push(name);
+            });
+            
+            if (items.length === 0) {
+                alert("Add medicines to the bill first.");
+                return;
+            }
+            
+            const btn = document.querySelector('.btn-pro i.fa-shield-virus').parentNode;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/check-interactions`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ items, allergies })
+                });
+                const data = await res.json();
+                
+                const warningBox = document.getElementById('ai-interaction-warning');
+                if (data.warning) {
+                    document.getElementById('ai-warning-text').innerText = data.warning;
+                    warningBox.style.display = 'block';
+                    // Flash red
+                    document.body.style.boxShadow = 'inset 0 0 50px rgba(231,76,60,0.5)';
+                    setTimeout(()=> document.body.style.boxShadow = 'none', 1000);
+                } else {
+                    warningBox.style.display = 'none';
+                    alert("✅ AI Analysis: No severe interactions or allergy risks detected.");
+                }
+            } catch(e) {
+                alert("Error checking AI interactions");
+            } finally {
+                btn.innerHTML = orig;
+            }
+        };
+
+        // ========== Hold & Resume Bill ==========
+        window.heldBills = [];
+        
+        window.holdCurrentBill = function() {
+            const customerName = document.getElementById('customer-name').value.trim() || 'Walk-in Patient';
+            const items = [];
+            document.querySelectorAll('.invoice-item-row').forEach(row => {
+                const name = row.querySelector('.item-name').value.trim();
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const batch = row.querySelector('.item-batch').value.trim();
+                const expiry = row.querySelector('.item-expiry').value.trim();
+                if (name && qty > 0) items.push({name, qty, price, batch, expiry});
+            });
+            
+            if (items.length === 0) {
+                alert("Nothing to hold.");
+                return;
+            }
+            
+            window.heldBills.push({ customerName, items, time: new Date().toLocaleTimeString() });
+            document.getElementById('held-bill-count').innerText = window.heldBills.length;
+            
+            // Clear current UI
+            document.getElementById('invoice-items').innerHTML = '';
+            document.getElementById('customer-name').value = '';
+            document.getElementById('discount-amount').value = '0.00';
+            updateInvoiceTotal();
+            alert(`Bill for ${customerName} placed on hold.`);
+        };
+
+        window.resumeHeldBill = function() {
+            if (window.heldBills.length === 0) {
+                alert("No bills on hold.");
+                return;
+            }
+            
+            // Pop the last held bill
+            const bill = window.heldBills.pop();
+            document.getElementById('held-bill-count').innerText = window.heldBills.length;
+            
+            // Clear current cart first
+            document.getElementById('invoice-items').innerHTML = '';
+            
+            document.getElementById('customer-name').value = bill.customerName;
+            
+            bill.items.forEach(i => {
+                window.addInvoiceItem(i.name, i.qty, i.price, i.batch, i.expiry);
+            });
+            updateInvoiceTotal();
+            alert(`Resumed bill for ${bill.customerName}.`);
+        };
+
+        window.generateInvoice = async function() {
+            const customerName = document.getElementById('customer-name').value.trim() || 'Walk-in Patient';
+            const customerPhone = document.getElementById('customer-phone').value.trim();
+            const location = document.getElementById('billing-location')?.value.trim() || '';
+            const doctorName = document.getElementById('doctor-name').value.trim() + (location ? ` - ${location}` : '');
+            const doctorAddress = document.getElementById('doctor-address').value.trim();
+            const discount = parseFloat(document.getElementById('discount-amount').value) || 0;
+            const redeemedPoints = parseInt(document.getElementById('redeem-points').value) || 0;
+            const paymentMethod = document.getElementById('payment-method').value;
+            
+            const items = [];
+            let subtotal = 0;
+            document.querySelectorAll('.invoice-item-row').forEach(row => {
+                const name = row.querySelector('.item-name').value.trim();
+                const batch = row.querySelector('.item-batch').value.trim();
+                const expiry = row.querySelector('.item-expiry').value.trim();
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                if(name && qty > 0) {
+                    items.push({name, batch, expiry, qty, price});
+                    subtotal += (qty * price);
+                }
+            });
+            
+            if(items.length === 0) {
+                alert('Please add at least one medicine to generate an invoice.');
+                return;
+            }
+            const gstAmount = subtotal * 0.18;
+            const totalAmount = subtotal + gstAmount - discount - redeemedPoints;
+            
+            const btn = document.querySelector('.btn-checkout');
+            const origHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Invoice...';
+            btn.disabled = true;
+
+            try {
+                // 1. Record Sale & Deduct Stock
+                const saleData = {
+                    customer_name: customerName,
+                    customer_phone: customerPhone,
+                    redeemed_points: redeemedPoints,
+                    total_amount: totalAmount,
+                    items: items
+                };
+                await fetch(`${API_BASE}/sales`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify(saleData)
+                });
+                
+                // 2. Generate PDF Invoice
+                const invoiceData = {
+                    customer_name: customerName,
+                    doctor_name: doctorName,
+                    doctor_address: doctorAddress,
+                    discount: discount,
+                    gst_amount: gstAmount,
+                    payment_method: paymentMethod,
+                    total_amount: totalAmount,
+                    items: items
+                };
+                const res = await fetch(`${API_BASE}/generate-invoice`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify(invoiceData)
+                });
+                
+                if (!res.ok) throw new Error('Failed to generate invoice');
+                
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Invoice_${Date.now()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                
+                // 3. Reset UI
+                document.getElementById('invoice-items').innerHTML = '';
+                document.getElementById('customer-name').value = '';
+                document.getElementById('doctor-name').value = '';
+                document.getElementById('doctor-address').value = '';
+                if(document.getElementById('billing-location')) document.getElementById('billing-location').value = '';
+                document.getElementById('discount-amount').value = '0.00';
+                window.updateInvoiceTotal();
+                if(window.loadInventory) loadInventory();
+                if(window.loadDashboard) loadDashboard();
+                
+            } catch(e) {
+                alert('Error generating invoice: ' + e.message);
+                console.error(e);
+            } finally {
+                btn.innerHTML = origHtml;
+                btn.disabled = false;
+            }
+        };
+
+        window.processExcelUpload = function(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+                window.parsedExcelItems = json;
+                
+                const previewHtml = json.slice(0, 5).map(row => 
+                    `<tr><td>${row.name||row.Name}</td><td>${row.quantity||row.Quantity}</td><td>₹${row.price||row.Price}</td></tr>`
+                ).join('');
+                const tb = document.getElementById('excelPreviewBody');
+                if (tb) tb.innerHTML = previewHtml;
+                const pContainer = document.getElementById('excelPreviewContainer');
+                if (pContainer) pContainer.style.display = 'block';
+            };
+            reader.readAsArrayBuffer(file);
+        };
+        
+        window.processBillImage = async function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const icon = document.getElementById('billCameraIcon');
+            const text = document.getElementById('billCameraText');
+            
+            const origIcon = icon.className;
+            const origText = text.innerText;
+            
+            icon.className = 'fas fa-spinner fa-spin';
+            text.innerText = 'AI is analyzing the bill... please wait';
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            try {
+                const response = await fetch(`${API_BASE}/vision-ocr`, {
+                    method: 'POST',
+                    headers: authHeadersMultipart(),
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    const items = Array.isArray(data.items) ? data.items : [];
+                    if (items.length === 0) {
+                        alert("AI could not detect any medicines in this bill.");
+                        return;
+                    }
+                    
+                    window.parsedExcelItems = items;
+                    const previewHtml = items.map(row => 
+                        `<tr><td>${row.name||row.Name||row.medicine||'Unknown'}</td><td>${row.quantity||row.Quantity||row.qty||1}</td><td>₹${row.price||row.Price||row.rate||0}</td></tr>`
+                    ).join('');
+                    const tb = document.getElementById('excelPreviewBody');
+                    if (tb) tb.innerHTML = previewHtml;
+                    const pContainer = document.getElementById('excelPreviewContainer');
+                    if (pContainer) {
+                        pContainer.style.display = 'block';
+                        // Update title to show it's from AI
+                        const pTitle = pContainer.querySelector('h3');
+                        if (pTitle) pTitle.innerHTML = '<i class="fas fa-robot"></i> AI Extracted Data Preview';
+                    }
+                    
+                    alert("AI processed the bill! Review the extracted data and click 'Confirm & Upload Data'.");
+                } else {
+                    alert("Error analyzing bill: " + (data.error || 'Unknown Error'));
+                }
+            } catch (error) {
+                console.error("AI processing error:", error);
+                alert("Failed to connect to the server.");
+            } finally {
+                icon.className = 'fas fa-camera';
+                text.innerText = 'Click to Snap or Upload Bill Photo';
+                input.value = ''; // Reset input so same file can be selected again
+            }
+        };
+
+        document.getElementById('confirmExcelBtn')?.addEventListener('click', async () => {
+            if (parsedExcelItems.length === 0) return;
+            const btn = document.getElementById('confirmExcelBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch(`${API_BASE}/bulk-upload-qr`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ items: parsedExcelItems })
+                });
+                const data = await res.json();
+                alert(`✅ Success: ${data.message}`);
+                
+                // Reset UI
+                if (document.getElementById('excelPreviewContainer')) document.getElementById('excelPreviewContainer').style.display = 'none';
+                if (document.getElementById('excelFileInput')) document.getElementById('excelFileInput').value = '';
+                if (document.getElementById('billPhotoInput')) document.getElementById('billPhotoInput').value = '';
+                window.parsedExcelItems = [];
+                
+                loadInventory(); loadDashboard();
+            } catch(e) {
+                alert('Failed to upload data to server.');
+            } finally {
+                btn.innerHTML = '<i class="fas fa-database"></i> Confirm & Add Items to Stock';
+                btn.disabled = false;
+            }
+        });
+        // ========== Update Stock from JSON (manual) ==========
+        window.updateStockFromJson = async function() {
+            const jsonText = document.getElementById('manual-qr-data').value.trim();
+            if (!jsonText) { alert('Paste JSON first'); return; }
+            let items;
+            try { const parsed = JSON.parse(jsonText); items = Array.isArray(parsed) ? parsed : (parsed.items || []); } catch(e) { alert('Invalid JSON'); return; }
+            const valid = items.filter(i => i.name && i.quantity && i.price && i.expiry_date);
+            if (!valid.length) { alert('No valid items'); return; }
+            const res = await fetch(`${API_BASE}/bulk-upload-qr`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ items: valid }) });
+            const result = await res.json();
+            if (result.status === 'success') { alert(`✅ Updated ${valid.length} items`); loadInventory(); loadDashboard(); document.getElementById('manual-qr-data').value = ''; }
+            else alert('Error: ' + result.message);
+        };
+
+        // ========== Anatomy Map AI Symptom Checker Logic ==========
+        window.currentAnatomyRegion = '';
+        
+        window.filterAnatomy = function(region) {
+            window.currentAnatomyRegion = region;
+            const title = document.getElementById('anatomy-title');
+            const symptomBox = document.getElementById('anatomy-symptom-box');
+            const results = document.getElementById('anatomy-results');
+            
+            // Highlight active zone visually
+            document.querySelectorAll('.anatomy-zone').forEach(z => z.style.border = 'none');
+            event.target.style.border = '3px solid white';
+            
+            title.innerHTML = `Region: <span style="color:#ff6b6b; text-transform:capitalize;">${region}</span>`;
+            symptomBox.style.display = 'block';
+            document.getElementById('anatomy-symptom-input').value = '';
+            document.getElementById('anatomy-symptom-input').focus();
+            results.innerHTML = `<div style="padding:15px; background:rgba(255,255,255,0.1); border-radius:10px; color:#cbd5e1;">Please enter a symptom above to get an AI-matched medicine recommendation from your stock.</div>`;
+        };
+
+        window.analyzeAnatomySymptom = async function() {
+            const symptom = document.getElementById('anatomy-symptom-input').value.trim();
+            const results = document.getElementById('anatomy-results');
+            
+            if (!symptom) {
+                alert("Please enter a symptom.");
+                return;
+            }
+            
+            results.innerHTML = `<div style="text-align:center; padding:20px; color:#a7f3d0;"><i class="fas fa-spinner fa-spin fa-2x"></i><br>AI Analyzing Symptom...</div>`;
+            
+            try {
+                const res = await fetch(`${API_BASE}/anatomy-symptom`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        region: window.currentAnatomyRegion,
+                        symptom: symptom
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.status === 'success' && data.match) {
+                    const m = data.match;
+                    results.innerHTML = `
+                        <div style="background:rgba(46, 213, 115, 0.2); border:1px solid #2ed573; padding:15px; border-radius:10px;">
+                            <h4 style="color:#2ed573; margin-top:0;"><i class="fas fa-check-circle"></i> AI Recommendation</h4>
+                            <p style="margin:5px 0; font-size:0.9rem;">${data.reasoning}</p>
+                            <hr style="border-color:rgba(255,255,255,0.1); margin:10px 0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="font-weight:bold; font-size:1.1rem; color:white;">${m.name}</div>
+                                    <div style="color:#a7f3d0; font-size:0.85rem;">In Stock: ${m.quantity} | ₹${m.price}</div>
+                                </div>
+                                <button class="btn-pro" onclick="switchTab('billing'); setTimeout(()=>addInvoiceItem('${m.name}', 1, ${m.price}, '${m.batch||''}', '${m.expiry_date||''}'), 500);" style="padding:8px 15px; font-size:0.8rem;">Add to Bill</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    results.innerHTML = `<div style="padding:15px; background:rgba(255, 107, 107, 0.2); border:1px solid #ff6b6b; border-radius:10px; color:white;">No suitable matching medicine found in current stock for this symptom.</div>`;
+                }
+            } catch(e) {
+                results.innerHTML = `<div style="color:#ff6b6b; padding:10px;">Error connecting to AI Server.</div>`;
+            }
+        };
+
+        // ========== AI Features ==========
+        function populateMedicineSelects(){
+            fetch(`${API_BASE}/inventory`, { headers: authHeaders() }).then(res=>res.json()).then(data=>{
+                document.getElementById('med1').innerHTML = '<option value="">Select</option>'+data.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+                document.getElementById('med2').innerHTML = '<option value="">Select</option>'+data.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+            });
+        }
+        window.checkInteraction = function(){
+            const m1 = document.getElementById('med1').value;
+            const m2 = document.getElementById('med2').value;
+            const resultDiv = document.getElementById('interaction-result');
+            if(!m1 || !m2) { resultDiv.innerHTML = '⚠️ Select two medicines'; return; }
+            const interactions = { 'aspirin':['warfarin'], 'warfarin':['aspirin','ibuprofen'], 'ibuprofen':['warfarin'] };
+            if((interactions[m1.toLowerCase()]||[]).includes(m2.toLowerCase()) || (interactions[m2.toLowerCase()]||[]).includes(m1.toLowerCase())){
+                resultDiv.innerHTML = '🚨 <strong>Potential interaction detected</strong> between '+m1+' and '+m2+'. Consult doctor.';
+            } else {
+                resultDiv.innerHTML = '✅ No known interaction between '+m1+' and '+m2+'.';
+            }
+        };
+        window.recommendDosage = function(){
+            const med = document.getElementById('dosage-med').value.toLowerCase();
+            const age = parseInt(document.getElementById('patient-age').value);
+            const resultDiv = document.getElementById('dosage-result');
+            const dosageDB = { 'paracetamol':{ adult:'500mg every 6 hours', child:'15mg/kg every 6 hours' }, 'ibuprofen':{ adult:'200-400mg every 8 hours', child:'10mg/kg' } };
+            let found = Object.keys(dosageDB).find(k=>med.includes(k));
+            if(found){
+                let rec = age<18 ? dosageDB[found].child : dosageDB[found].adult;
+                resultDiv.innerHTML = `<strong>${found.toUpperCase()}</strong><br>Recommended: ${rec}<br><small>Always consult a doctor.</small>`;
+            } else {
+                resultDiv.innerHTML = '🤖 No dosage data for this medicine. Please ask a pharmacist.';
+            }
+        };
+        window.predictExpiry = function(){
+            fetch(`${API_BASE}/inventory`, { headers: authHeaders() }).then(res=>res.json()).then(meds=>{
+                const today = new Date();
+                const expiring = meds.filter(m=> (new Date(m.expiry_date)-today)/(1000*3600*24) <= 90).sort((a,b)=>new Date(a.expiry_date)-new Date(b.expiry_date));
+                const resultDiv = document.getElementById('expiry-prediction');
+                if(expiring.length===0) resultDiv.innerHTML = '🎉 No medicines expiring in next 90 days.';
+                else resultDiv.innerHTML = `<strong>⚠️ ${expiring.length} medicine(s) expiring soon:</strong><br>`+expiring.slice(0,5).map(m=>`• ${m.name} – expires ${m.expiry_date} (stock: ${m.quantity})`).join('<br>')+'<br><small>Recommend: Move to front or discount.</small>';
+            });
+        };
+
+        // ========== ANALYTICS CHART LOGIC ==========
+        let revenueChart = null;
+        window.loadAnalytics = async function() {
+            try {
+                const res = await fetch(`${API_BASE}/analytics`, { headers: authHeaders() });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    const ctx = document.getElementById('revenueChart').getContext('2d');
+                    
+                    if (revenueChart) {
+                        revenueChart.destroy();
+                    }
+                    
+                    revenueChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                label: 'Daily Revenue (₹)',
+                                data: data.values,
+                                borderColor: '#f39c12',
+                                backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'top' },
+                                title: { display: true, text: 'Last 7 Days Revenue Trend' }
+                            },
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error("Failed to load analytics", e);
+            }
+        };
+
+        // ========== CORE UI & NAVIGATION ==========
+        function showModal(id){ document.getElementById(id).style.display='flex'; }
+        function closeModal(id){ document.getElementById(id).style.display='none'; }
+        window.exportReport = async function(type){
+            const url = type==='inventory' ? `${API_BASE}/export/inventory/pdf` : `${API_BASE}/export/sales/excel`;
+            const res = await fetch(url, { headers: authHeaders() });
+            const blob = await res.blob();
+            const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=type==='inventory'?'inventory.pdf':'sales.xlsx'; a.click();
+        };
+
+        window.generatePurchaseOrder = async function() {
+            try {
+                // We fetch the dashboard data first to see if there are low stock items
+                const res = await fetch(`${API_BASE}/dashboard`, { headers: authHeaders() });
+                const data = await res.json();
+                if (data.low_stock_count === 0) {
+                    alert("No medicines are currently running low on stock. Purchase Order not required.");
+                    return;
+                }
+                
+                // Open the PDF directly in a new tab
+                window.open(`${API_BASE}/purchase-order`, '_blank');
+            } catch (e) {
+                alert("Error generating purchase order.");
+            }
+        };
+        document.getElementById('logout-btn')?.addEventListener('click',()=>{ if(confirm('Logout?')) location.reload(); });
+        // Mobile sidebar toggle
+        document.getElementById('mobile-menu-toggle')?.addEventListener('click',()=>{ document.getElementById('sidebar').classList.toggle('open'); });
+        document.addEventListener('click',(e)=>{ if(window.innerWidth<=768 && document.getElementById('sidebar').classList.contains('open') && !document.getElementById('sidebar').contains(e.target) && !document.getElementById('mobile-menu-toggle').contains(e.target)) document.getElementById('sidebar').classList.remove('open'); });
+    </script>
+    <script>
+        // ========== SMART SCANNER (Webcam Barcode) ==========
+        let html5QrcodeScanner;
+        function openSmartScan() {
+            document.getElementById('scanner-modal').style.display = 'block';
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "scanner-reader", { fps: 10, qrbox: 250 });
+            html5QrcodeScanner.render(onScanSuccess, onScanError);
+        }
+
+        function closeSmartScan() {
+            document.getElementById('scanner-modal').style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Scan result: ${decodedText}`);
+            closeSmartScan();
+            autoAddToBill(decodedText, 1);
+            speakText("Scanned " + decodedText);
+        }
+
+        function onScanError(errorMessage) {}
+
+        // ========== AI VISION (OCR Prescription) ==========
+        async function processOCR(input) {
+            if (input.files && input.files[0]) {
+                const btn = document.getElementById('ocr-upload-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI Reading...';
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('image', input.files[0]);
+                    
+                    const response = await fetch(`${API_BASE}/vision-prescription`, {
+                        method: 'POST',
+                        headers: authHeadersMultipart(),
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        if (result.items && result.items.length > 0) {
+                            result.items.forEach(med => {
+                                autoAddToBill(med, 1);
+                            });
+                            speakText("AI Vision added " + result.items.length + " medicines from the prescription.");
+                        } else {
+                            alert("AI Vision could not detect any medicines in this prescription.");
+                        }
+                    } else {
+                        alert("AI Error: " + (result.error || "Unknown error"));
+                    }
+                } catch (e) {
+                    alert("AI Vision Network Error: " + e.message);
+                } finally {
+                    btn.innerHTML = originalText;
+                    input.value = ""; 
+                }
+            }
+        }
+        // Fuzzy string similarity (Levenshtein distance based)
+        function stringSimilarity(a, b) {
+            a = a.toLowerCase(); b = b.toLowerCase();
+            if (a === b) return 1;
+            if (a.length === 0 || b.length === 0) return 0;
+            
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b[i-1] === a[j-1]) matrix[i][j] = matrix[i-1][j-1];
+                    else matrix[i][j] = Math.min(matrix[i-1][j-1]+1, matrix[i][j-1]+1, matrix[i-1][j]+1);
+                }
+            }
+            const maxLen = Math.max(a.length, b.length);
+            return 1 - (matrix[b.length][a.length] / maxLen);
+        }
+
+        // Helper to Auto Add to Bill and find prices - uses smart fuzzy matching
+        function autoAddToBill(medName, qty) {
+            let price = 50; // default fallback
+            let batch = '';
+            let expiry = '';
+            let properName = medName.charAt(0).toUpperCase() + medName.slice(1);
+            if(window.inventoryData && window.inventoryData.length > 0) {
+                // Clean filler words from voice input
+                let searchName = medName.toLowerCase().replace(/tablets?|pills?|capsules?|syrup|mg|ml|\d+/g, '').trim();
+                if(searchName.length === 0) searchName = medName.toLowerCase();
+
+                // Score every inventory item and pick the best match
+                let bestMatch = null;
+                let bestScore = 0;
+
+                window.inventoryData.forEach(m => {
+                    const invName = m.name.toLowerCase();
+                    let score = 0;
+                    
+                    // Exact match = highest
+                    if (invName === searchName) score = 100;
+                    // Starts with
+                    else if (invName.startsWith(searchName)) score = 80;
+                    else if (searchName.startsWith(invName)) score = 75;
+                    // Contains
+                    else if (invName.includes(searchName)) score = 60;
+                    else if (searchName.includes(invName)) score = 55;
+                    // Fuzzy similarity
+                    else {
+                        const sim = stringSimilarity(searchName, invName);
+                        score = sim * 50; // max 50 for fuzzy
+                    }
+                    
+                    // Also check individual words
+                    const searchWords = searchName.split(/\s+/);
+                    const invWords = invName.split(/\s+/);
+                    searchWords.forEach(sw => {
+                        invWords.forEach(iw => {
+                            if (sw.length > 2 && iw.length > 2) {
+                                if (sw === iw) score += 20;
+                                else if (iw.startsWith(sw) || sw.startsWith(iw)) score += 10;
+                            }
+                        });
+                    });
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = m;
+                    }
+                });
+                
+                // Only accept matches with a reasonable confidence
+                if (bestMatch && bestScore >= 30) {
+                    properName = bestMatch.name;
+                    price = bestMatch.price;
+                    batch = bestMatch.batch_number || '';
+                    expiry = bestMatch.expiry_date || '';
+                }
+            }
+            window.addInvoiceItem(properName, qty, price, batch, expiry);
+            if(window.updateInvoiceTotal) window.updateInvoiceTotal();
+        }
+
+        // Text to Speech
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // AI Chatbot Logic
+        async function sendAIChat() {
+            const input = document.getElementById('ai-chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            const history = document.getElementById('ai-chat-history');
+            
+            // User Message
+            history.innerHTML += `
+                <div style="align-self:flex-end; background:var(--primary-color); color:white; padding:12px 18px; border-radius:15px 15px 0 15px; box-shadow:0 4px 15px rgba(0,0,0,0.1); max-width:80%; font-size:1.05rem;">
+                    ${message}
+                </div>
+            `;
+            input.value = '';
+            history.scrollTop = history.scrollHeight;
+
+            // Simulate AI Typing
+            const typingId = 'typing-' + Date.now();
+            history.innerHTML += `
+                <div id="${typingId}" style="align-self:flex-start; background:rgba(30, 41, 59, 0.8); padding:12px 18px; border-radius:15px 15px 15px 0; box-shadow:0 4px 15px rgba(0,0,0,0.2); max-width:80%; font-size:1.05rem; color:var(--text-light);">
+                    <i class="fas fa-spinner fa-spin"></i> AI is thinking...
+                </div>
+            `;
+            history.scrollTop = history.scrollHeight;
+
+            // Connect to real AI Pharmacist Backend
+            try {
+                const res = await fetch(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ message: message })
+                });
+                
+                document.getElementById(typingId).remove();
+                
+                const data = await res.json();
+                let response = "Error: Could not get a response.";
+                if (res.ok && data.status === 'success') {
+                    // Convert markdown bold to HTML bold
+                    response = data.response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                } else if (data.error) {
+                    response = `Error: ${data.error}`;
+                }
+
+                history.innerHTML += `
+                    <div style="align-self:flex-start; background:rgba(30, 41, 59, 0.8); padding:12px 18px; border-radius:15px 15px 15px 0; box-shadow:0 4px 15px rgba(0,0,0,0.2); max-width:80%; font-size:1.05rem; border-left: 4px solid var(--secondary-color); color: white;">
+                        <strong><i class="fas fa-robot" style="color:var(--secondary-color);"></i> AI Pharmacist:</strong><br><br>${response}
+                    </div>
+                `;
+                history.scrollTop = history.scrollHeight;
+            } catch (error) {
+                document.getElementById(typingId).remove();
+                history.innerHTML += `
+                    <div style="align-self:flex-start; background:rgba(30, 41, 59, 0.8); padding:12px 18px; border-radius:15px 15px 15px 0; box-shadow:0 4px 15px rgba(0,0,0,0.2); max-width:80%; font-size:1.05rem; border-left: 4px solid red; color: red;">
+                        <strong><i class="fas fa-exclamation-triangle"></i> Error:</strong> Failed to connect to AI server.
+                    </div>
+                `;
+                history.scrollTop = history.scrollHeight;
+            }
+        }
+        // ========== Anatomy Map Logic ==========
+        function filterAnatomy(region) {
+            const title = document.getElementById('anatomy-title');
+            const results = document.getElementById('anatomy-results');
+            
+            let html = '';
+            if(region === 'head') {
+                title.innerHTML = '<i class="fas fa-head-side-virus" style="color:#ff6b6b;"></i> Head & Neurology (Painkillers, Migraine)';
+                html = `<div class="transaction-item"><div><strong>Paracetamol 500mg</strong><br>Stock: 500</div><button class="btn-secondary">Order</button></div>
+                        <div class="transaction-item"><div><strong>Sumatriptan 50mg</strong><br>Stock: 45</div><button class="btn-secondary">Order</button></div>`;
+            } else if(region === 'heart') {
+                title.innerHTML = '<i class="fas fa-heartbeat" style="color:#ff6b6b;"></i> Cardiovascular (BP, Blood Thinners)';
+                html = `<div class="transaction-item"><div><strong>Amlodipine 5mg</strong><br>Stock: 210</div><button class="btn-secondary">Order</button></div>
+                        <div class="transaction-item"><div><strong>Aspirin 75mg</strong><br>Stock: 150</div><button class="btn-secondary">Order</button></div>`;
+            } else if(region === 'lungs') {
+                title.innerHTML = '<i class="fas fa-lungs" style="color:#00f2fe;"></i> Respiratory (Asthma, Cough)';
+                html = `<div class="transaction-item"><div><strong>Salbutamol Inhaler</strong><br>Stock: 30</div><button class="btn-secondary">Order</button></div>
+                        <div class="transaction-item"><div><strong>Cetirizine 10mg</strong><br>Stock: 300</div><button class="btn-secondary">Order</button></div>`;
+            } else if(region === 'stomach') {
+                title.innerHTML = '<i class="fas fa-procedures" style="color:#f59e0b;"></i> Gastroenterology (Acidity, Digestion)';
+                html = `<div class="transaction-item"><div><strong>Pantoprazole 40mg</strong><br>Stock: 400</div><button class="btn-secondary">Order</button></div>
+                        <div class="transaction-item"><div><strong>Ondansetron 4mg</strong><br>Stock: 120</div><button class="btn-secondary">Order</button></div>`;
+            } else if(region === 'joints') {
+                title.innerHTML = '<i class="fas fa-bone" style="color:#2ed573;"></i> Orthopedics (Joint Pain, Calcium)';
+                html = `<div class="transaction-item"><div><strong>Ibuprofen 400mg</strong><br>Stock: 350</div><button class="btn-secondary">Order</button></div>
+                        <div class="transaction-item"><div><strong>Calcium + Vit D3</strong><br>Stock: 180</div><button class="btn-secondary">Order</button></div>`;
+            }
+            results.innerHTML = html;
+        }
+
+        // ========== Telemedicine Logic ==========
+        function startTelemedicine() {
+            const status = document.getElementById('tele-status');
+            const btn = document.getElementById('tele-connect-btn');
+            const video = document.getElementById('tele-video');
+            const rx = document.getElementById('tele-rx-result');
+            
+            btn.style.display = 'none';
+            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting to Dr. Smith...';
+            
+            document.getElementById('tele-overlay').style.display = 'none';
+            video.style.opacity = '1';
+            speakText("Hello, this is Doctor Smith. Please describe the patient's symptoms in the portal.");
+            rx.innerHTML = "<strong>Rx Generated:</strong><br>1. Azithromycin 500mg (1x Daily)<br>2. Paracetamol 650mg (SOS)";
+            speakText("I have sent the digital prescription. You may proceed with billing.");
+        }
+
+        // ========== Biometric Overlay Logic ==========
+        function simulateBiometricScan(element) {
+            const status = document.getElementById('biometric-status');
+            
+            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+            status.style.color = "#00f2fe";
+            element.style.borderColor = "#2ed573";
+            element.style.background = "rgba(46,213,115,0.15)";
+            element.style.boxShadow = "0 0 30px rgba(46,213,115,0.5)";
+            element.querySelector('i').style.color = "#2ed573";
+            status.style.color = "#2ed573";
+            status.innerHTML = "✓ Access Granted";
+            speakText("Access Granted. Welcome.");
+            
+            document.getElementById('display-username').innerText = "Admin (Biometric)";
+            document.getElementById('display-role').innerText = "ADMIN";
+            document.getElementById('login-screen').classList.remove('active');
+            document.getElementById('main-app').classList.add('active');
+            if (typeof loadInventory === 'function') loadInventory();
+        }
+        /* --- Auth/Login Screen --- */
+        document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            try {
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    // Store JWT token for authenticated API calls
+                    if (data.token) localStorage.setItem('jwt_token', data.token);
+                    document.getElementById('display-username').innerText = data.user.username;
+                    document.getElementById('display-role').innerText = data.user.role.toUpperCase();
+                    document.getElementById('login-screen').classList.remove('active');
+                    document.getElementById('main-app').classList.add('active');
+                    speakText('Welcome ' + data.user.username);
+                    if (typeof loadInventory === 'function') loadInventory();
+                } else {
+                    alert(data.message || "Login Failed");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Login Error: Server may be offline.");
+            }
+        });
+        
+        // --- Signup Form Logic ---
+        function checkPasswordStrength(password) {
+            const bar = document.getElementById('password-strength-bar');
+            const text = document.getElementById('password-strength-text');
+            if(!password) {
+                bar.style.width = '0%'; text.innerText = ''; return;
+            }
+            let strength = 0;
+            if(password.length >= 6) strength += 25;
+            if(password.length >= 10) strength += 25;
+            if(/[A-Z]/.test(password) && /[a-z]/.test(password)) strength += 25;
+            if(/[^A-Za-z0-9]/.test(password)) strength += 25;
+            
+            bar.style.width = strength + '%';
+            if(strength <= 25) { bar.style.background = '#ff4b2b'; text.innerText = 'Weak'; text.style.color = '#ff4b2b'; }
+            else if(strength <= 50) { bar.style.background = '#f9ca24'; text.innerText = 'Fair'; text.style.color = '#f9ca24'; }
+            else if(strength <= 75) { bar.style.background = '#00f2fe'; text.innerText = 'Good'; text.style.color = '#00f2fe'; }
+            else { bar.style.background = '#2ed573'; text.innerText = 'Strong'; text.style.color = '#2ed573'; }
+        }
+
+        document.getElementById('signup-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            
+            const username = document.getElementById('signup-username').value;
+            const password = document.getElementById('signup-password').value;
+            const role = document.getElementById('signup-role').value;
+            
+            try {
+                const res = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, role })
+                });
+                const data = await res.json();
+                if(data.status === 'success') {
+                    alert('? Account Created Successfully! Please login.');
+                    switchAuth('login');
+                    document.getElementById('signup-form').reset();
+                    checkPasswordStrength('');
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch(e) {
+                alert('Registration failed. Server may be offline.');
+            } finally {
+                btn.innerHTML = original;
+            }
+        });
+
+        // --- Sidebar Navigation Logic ---
+        document.querySelectorAll('#nav-menu li').forEach(li => {
+            li.addEventListener('click', function() {
+                if(this.id === 'logout-btn') {
+                    // Handle logout - clear JWT token
+                    localStorage.removeItem('jwt_token');
+                    document.getElementById('main-app').classList.remove('active');
+                    document.getElementById('login-screen').classList.add('active');
+                    return;
+                }
+                
+                // Remove active from all nav items
+                document.querySelectorAll('#nav-menu li').forEach(el => el.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+                
+                // Show target tab content
+                const target = this.getAttribute('data-target');
+                const targetEl = document.getElementById(target);
+                if(targetEl) {
+                    targetEl.classList.add('active');
+                    
+                    if (target === 'analytics' && window.loadAnalytics) {
+                        window.loadAnalytics();
+                    }
+                    
+                    // Update Page Title safely
+                    const titleText = this.innerText.trim();
+                    const pageTitle = document.getElementById('page-title');
+                    if (pageTitle) {
+                        pageTitle.innerText = titleText;
+                    }
+                }
+            });
+        });
+
+
+    </script>
+    <script>
+    // ========== ELEGANT MEDICAL AMBIENT WAVE MESH ==========
+    (function() {
+        const canvas = document.getElementById('dashboard-3d-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let W, H;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Smooth ambient wave nodes
+        let step = 0;
+        function animate() {
+            step += 0.008;
+            ctx.clearRect(0, 0, W, H);
+
+            // Subtle gradient waves
+            const grad1 = ctx.createRadialGradient(
+                W * 0.3 + Math.sin(step) * 100, H * 0.3 + Math.cos(step * 0.8) * 80, 50,
+                W * 0.3, H * 0.3, W * 0.5
+            );
+            grad1.addColorStop(0, 'rgba(14, 165, 233, 0.08)');
+            grad1.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = grad1;
+            ctx.fillRect(0, 0, W, H);
+
+            const grad2 = ctx.createRadialGradient(
+                W * 0.7 + Math.cos(step * 0.7) * 90, H * 0.7 + Math.sin(step * 0.9) * 70, 50,
+                W * 0.7, H * 0.7, W * 0.5
+            );
+            grad2.addColorStop(0, 'rgba(16, 185, 129, 0.06)');
+            grad2.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = grad2;
+            ctx.fillRect(0, 0, W, H);
+
+            // Clean, minimal grid points
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+            const spacing = 80;
+            for (let x = spacing / 2; x < W; x += spacing) {
+                for (let y = spacing / 2; y < H; y += spacing) {
+                    const distShift = Math.sin(step + x * 0.01 + y * 0.01) * 1.5;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 1.2 + distShift * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+        animate();
+    })();
+
+        async function sendPromoSMS() {
+            try {
+                const response = await fetch('/api/send-sms', { method: 'POST', headers: authHeaders() });
+                const data = await response.json();
+                alert("? Success: " + data.message);
+            } catch (e) {
+                alert("Failed to send Promo SMS.");
+            }
+        }
+
+        async function autoOrderPredicted() {
+            try {
+                const response = await fetch('/api/auto-order-predicted', { method: 'POST', headers: authHeaders() });
+                const data = await response.json();
+                alert("? Success: " + data.message);
+            } catch (e) {
+                alert("Failed to auto-order predicted stock.");
+            }
+        }
+
+        function autoBillPrescription() {
+            const rxResult = document.getElementById('tele-rx-result');
+            if (rxResult) {
+                const rxText = rxResult.innerText;
+                if (rxText && rxText !== "Awaiting consult...") {
+                    // Logic to automatically add predicted items to POS cart
+                    if (rxText.toLowerCase().includes("paracetamol")) {
+                        addToCart({id: 1, name: "Paracetamol 500mg", price: 5.99, category: "Pain Relief", quantity: 1, max: 50});
+                    }
+                    if (rxText.toLowerCase().includes("amoxicillin")) {
+                        addToCart({id: 2, name: "Amoxicillin 250mg", price: 12.50, category: "Antibiotics", quantity: 1, max: 12});
+                    }
+                    alert("? Digital Prescription items successfully added to the POS Cart!");
+                    // Switch to POS tab
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.getElementById('pos').classList.add('active');
+                    document.querySelectorAll('.sidebar li').forEach(l => l.classList.remove('active'));
+                    document.querySelectorAll('.sidebar li')[2].classList.add('active'); // POS tab
+                } else {
+                    alert("No digital prescription available yet. Start consult first.");
+                }
+            }
+        }
+
+        async function launchDrone() {
+            try {
+                const response = await fetch('/api/launch-drone', { method: 'POST', headers: authHeaders() });
+                const data = await response.json();
+                alert("? " + data.message);
+            } catch (e) {
+                alert("Failed to launch drone.");
+            }
+        }
+
+        // ========== Voice Assistant Toggle ==========
+        let isVoiceListening = false;
+        window.toggleVoiceAssistant = function() {
+            const btn = document.getElementById('voice-assistant-btn');
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!window.voiceRec) {
+                    window.voiceRec = new SpeechRecognition();
+                    window.voiceRec.continuous = false;
+                    window.voiceRec.interimResults = false;
+                    window.voiceRec.lang = 'en-US';
+                    
+                    window.voiceRec.onstart = () => {
+                        isVoiceListening = true;
+                        if (btn) {
+                            btn.style.transform = 'scale(1.2)';
+                            btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                        }
+                        if (typeof speakText === 'function') speakText("Voice Assistant listening. Say a command like navigate to billing.");
+                    };
+                    
+                    window.voiceRec.onresult = (e) => {
+                        const text = e.results[0][0].transcript.toLowerCase();
+                        if (text.includes("billing") || text.includes("pos")) {
+                            document.querySelector('[data-target="pos"]')?.click();
+                            if (typeof speakText === 'function') speakText("Navigating to POS Billing");
+                        } else if (text.includes("inventory") || text.includes("stock")) {
+                            document.querySelector('[data-target="inventory"]')?.click();
+                            if (typeof speakText === 'function') speakText("Navigating to Inventory");
+                        } else if (text.includes("analytics") || text.includes("report")) {
+                            document.querySelector('[data-target="analytics"]')?.click();
+                            if (typeof speakText === 'function') speakText("Navigating to Analytics");
+                        } else {
+                            if (typeof speakText === 'function') speakText("Voice command received: " + text);
+                        }
+                    };
+                    
+                    window.voiceRec.onend = () => {
+                        isVoiceListening = false;
+                        if (btn) {
+                            btn.style.transform = 'scale(1)';
+                            btn.style.background = 'linear-gradient(135deg, #ff416c, #ff4b2b)';
+                        }
+                    };
+                }
+                
+                if (isVoiceListening) {
+                    window.voiceRec.stop();
+                } else {
+                    window.voiceRec.start();
+                }
+            } else {
+                if (typeof speakText === 'function') speakText("Voice Assistant activated. How can I help you?");
+                alert("Voice Assistant activated!");
+            }
+        };
+
+        // ========== Command Palette (Ctrl+K) Logic ==========
+        window.openCmdPalette = function() {
+            const modal = document.getElementById('cmd-palette-modal');
+            if (modal) {
+                modal.style.display = 'block';
+                document.getElementById('cmd-input').value = '';
+                document.getElementById('cmd-input').focus();
+                filterCmdList();
+            }
+        };
+
+        window.closeCmdPalette = function() {
+            const modal = document.getElementById('cmd-palette-modal');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.filterCmdList = function() {
+            const query = (document.getElementById('cmd-input').value || '').toLowerCase().trim();
+            const results = document.getElementById('cmd-results');
+            if (!results) return;
+
+            const actions = [
+                { title: '📊 Navigate to Dashboard', action: () => document.querySelector('[data-target="dashboard"]')?.click() },
+                { title: '🧾 Navigate to POS Billing', action: () => document.querySelector('[data-target="pos"]')?.click() },
+                { title: '📦 Navigate to Inventory', action: () => document.querySelector('[data-target="inventory"]')?.click() },
+                { title: '🤖 Open AI Assistant', action: () => document.querySelector('[data-target="ai-assistant"]')?.click() },
+                { title: '📈 Navigate to Analytics', action: () => document.querySelector('[data-target="analytics"]')?.click() },
+                { title: '👥 Navigate to Patients CRM', action: () => document.querySelector('[data-target="patients"]')?.click() },
+                { title: '➕ Add New Medicine to Stock', action: () => showModal('add-medicine-modal') },
+                { title: '🧾 Print 80mm Thermal Receipt', action: () => printThermalReceipt() },
+                { title: '💬 Trigger Marketing SMS', action: () => sendPromoSMS() }
+            ];
+
+            let html = '';
+            // Matching actions
+            actions.filter(a => a.title.toLowerCase().includes(query)).forEach(a => {
+                html += `<div style="padding:10px 14px; background:rgba(255,255,255,0.08); border-radius:8px; cursor:pointer; color:white; font-weight:500;" onclick="closeCmdPalette(); (${a.action.toString()})()">${a.title}</div>`;
+            });
+
+            // Matching medicines in inventory
+            if (query.length >= 2 && inventoryData && inventoryData.length > 0) {
+                const medMatches = inventoryData.filter(m => m.name.toLowerCase().includes(query));
+                medMatches.slice(0, 4).forEach(m => {
+                    html += `<div style="padding:10px 14px; background:rgba(14, 165, 233, 0.15); border-left:3px solid var(--primary-color); border-radius:8px; cursor:pointer; color:white;" onclick="closeCmdPalette(); document.querySelector('[data-target=\\'pos\\']')?.click(); addInvoiceItem('${m.name}', 1, ${m.price}, '${m.batch_number||''}', '${m.expiry_date||''}');">
+                        <strong>💊 ${m.name}</strong> — Stock: ${m.quantity} | ₹${m.price} <span style="font-size:0.75rem; color:#10b981;">(Click to Add to POS)</span>
+                    </div>`;
+                });
+            }
+
+            if (!html) html = `<div style="color:#94a3b8; padding:10px; text-align:center;">No matching commands or medicines found.</div>`;
+            results.innerHTML = html;
+        };
+
+        // Ctrl+K Global Shortcut Listener
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                openCmdPalette();
+            } else if (e.key === 'Escape') {
+                closeCmdPalette();
+                closeModal('thermal-receipt-modal');
+            }
+        });
+
+        // ========== Light/Dark Theme Switcher ==========
+        window.toggleAppTheme = function() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            const isLight = body.classList.toggle('light-theme');
+            if (icon) {
+                icon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+            }
+            if (isLight) {
+                document.documentElement.style.setProperty('--card-bg', '#ffffff');
+                document.documentElement.style.setProperty('--text-dark', '#0f172a');
+            } else {
+                document.documentElement.style.setProperty('--card-bg', '#1e293b');
+                document.documentElement.style.setProperty('--text-dark', '#f8fafc');
+            }
+        };
+
+        // ========== Background Scene Switcher ==========
+        window.changeBgTheme = function(theme) {
+            const loginScreen = document.getElementById('login-screen');
+            const canvas = document.getElementById('dashboard-3d-canvas');
+            const bgSelectors = document.querySelectorAll('#bg-selector, select[onchange*="changeBgTheme"]');
+            bgSelectors.forEach(sel => sel.value = theme);
+
+            if (theme === 'hospital') {
+                if (loginScreen) loginScreen.style.background = "linear-gradient(rgba(10, 18, 35, 0.65), rgba(10, 18, 35, 0.85)), url('assets/hospital_corridor.png') no-repeat center center / cover";
+                if (canvas) canvas.style.display = 'block';
+                document.body.style.background = 'radial-gradient(circle at center, #0f172a 0%, #070b14 100%)';
+            } else if (theme === 'deepspace') {
+                if (loginScreen) loginScreen.style.background = "radial-gradient(circle at 50% 30%, #1e1b4b 0%, #0f172a 60%, #020617 100%)";
+                if (canvas) canvas.style.display = 'none';
+                document.body.style.background = 'radial-gradient(circle at 50% 30%, #1e1b4b 0%, #0f172a 60%, #020617 100%)';
+            } else if (theme === 'clean') {
+                if (loginScreen) loginScreen.style.background = "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)";
+                if (canvas) canvas.style.display = 'none';
+                document.body.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)';
+            } else { // 'ambient' (default)
+                if (loginScreen) loginScreen.style.background = "radial-gradient(circle at 50% 40%, #0f172a 0%, #090d16 100%)";
+                if (canvas) canvas.style.display = 'block';
+                document.body.style.background = 'radial-gradient(circle at 50% 40%, #0f172a 0%, #090d16 100%)';
+            }
+            localStorage.setItem('app_bg_theme', theme);
+        };
+
+        // Load saved background theme on startup
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedBg = localStorage.getItem('app_bg_theme') || 'ambient';
+            changeBgTheme(savedBg);
+        });
+
+        // ========== 80mm Thermal Receipt Generator ==========
+        window.printThermalReceipt = async function() {
+            const rows = document.querySelectorAll('.invoice-item-row');
+            if (!rows.length) {
+                alert("Please add at least one medicine item to the invoice first.");
+                return;
+            }
+            const items = [];
+            rows.forEach(r => {
+                const name = r.querySelector('.item-name')?.value || 'Item';
+                const qty = parseFloat(r.querySelector('.item-qty')?.value) || 1;
+                const price = parseFloat(r.querySelector('.item-price')?.value) || 0;
+                items.push({ name, qty, price });
+            });
+            const cust = document.getElementById('customer-name')?.value || 'Walk-in Customer';
+            const totalText = document.getElementById('invoice-total')?.innerText || '0.00';
+            const total_amount = parseFloat(totalText) || 0;
+
+            try {
+                const res = await fetch(`${API_BASE}/generate-thermal-receipt`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ customer_name: cust, total_amount, items })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    document.getElementById('thermal-receipt-content').innerText = data.receipt_text;
+                    showModal('thermal-receipt-modal');
+                } else {
+                    alert("Error generating thermal receipt: " + data.message);
+                }
+            } catch (e) {
+                alert("Failed to connect to backend for thermal receipt generation.");
+            }
+        };
+
+        window.printThermalWindow = function() {
+            const text = document.getElementById('thermal-receipt-content').innerText;
+            const printWin = window.open('', '_blank', 'width=400,height=600');
+            printWin.document.write(`<pre style="font-family:monospace; font-size:12px; margin:0; padding:10px;">${text}</pre>`);
+            printWin.document.close();
+            printWin.focus();
+            printWin.print();
+            printWin.close();
+        };
+
+        // ========== Patient Refill Alerts Sync ==========
+        window.loadRefillAlerts = async function() {
+            try {
+                const res = await fetch(`${API_BASE}/refill-alerts`, { headers: authHeaders() });
+                const data = await res.json();
+                if (data.status === 'success' && data.alerts) {
+                    alert(`🔔 Refill Sync Complete!\n${data.alerts.length} chronic patients are due for monthly refills.`);
+                }
+            } catch (e) {
+                console.error("Refill alert sync error:", e);
+            }
+        };
+
+    </script>
+
+    <!-- Floating Voice Assistant -->
+    <div id="voice-assistant-btn" style="position:fixed; bottom:30px; right:30px; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #ff416c, #ff4b2b); box-shadow:0 10px 25px rgba(255,65,108,0.5); display:flex; justify-content:center; align-items:center; cursor:pointer; z-index:9999; transition:transform 0.3s;" onclick="toggleVoiceAssistant()">
+        <i class="fas fa-microphone" style="color:white; font-size:1.5rem;"></i>
+    </div>
+
+</body>
+</html>
