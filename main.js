@@ -44,8 +44,8 @@ function createSplashWindow() {
         resizable: false,
         skipTaskbar: true,
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false
+            nodeIntegration: false,
+            contextIsolation: true
         }
     });
 
@@ -111,8 +111,8 @@ function createMainWindow() {
         title: 'Smart Pharmacy Management System',
         icon: path.join(__dirname, 'frontend', 'assets', 'icon.png'),
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false
+            nodeIntegration: false,
+            contextIsolation: true
         }
     });
 

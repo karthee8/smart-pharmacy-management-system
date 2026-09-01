@@ -120,8 +120,19 @@ else:
 app = Flask(__name__, static_folder=frontend_dir, static_url_path="")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB Max Payload Limit
 CORS(app, resources={r"/api/*": {"origins": "*"}})
-app.config["JWT_SECRET_KEY"] = "smart-pharmacy-permanent-secret-key-2026-v1"
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False
+# Dynamic persistent JWT Secret Key stored in data/.jwt_secret
+jwt_secret_path = os.path.join(DATA_DIR, ".jwt_secret")
+if os.path.exists(jwt_secret_path):
+    with open(jwt_secret_path, "r") as f:
+        jwt_secret = f.read().strip()
+else:
+    import secrets
+    jwt_secret = secrets.token_hex(32)
+    with open(jwt_secret_path, "w") as f:
+        f.write(jwt_secret)
+
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", jwt_secret)
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=12)
 jwt = JWTManager(app)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -338,6 +349,46 @@ class CustomerLoyalty(db.Model):
             "phone": self.phone,
             "points": self.points
         }
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    username = db.Column(db.String(80), nullable=True)
+    action = db.Column(db.String(100), nullable=False)
+    target = db.Column(db.String(100), nullable=True)
+    details = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(50), nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S") if self.timestamp else "",
+            "username": self.username or "SYSTEM",
+            "action": self.action,
+            "target": self.target or "",
+            "details": self.details or "",
+            "ip_address": self.ip_address or ""
+        }
+
+def log_audit(action, target="", details=""):
+    try:
+        username = None
+        try:
+            username = get_jwt_identity()
+        except Exception:
+            pass
+        ip = request.remote_addr if request else "127.0.0.1"
+        entry = AuditLog(
+            username=username,
+            action=action,
+            target=target,
+            details=details,
+            ip_address=ip
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception as e:
+        print(f"[AUDIT LOG ERROR] Failed to log audit event: {e}")
 
 # ------------------------- TELEMEDICINE MODELS -------------------------
 def calculate_haversine(lat1, lon1, lat2, lon2):
@@ -556,26 +607,44 @@ def login():
     user = User.query.filter_by(username=data.get("username", "").strip()).first()
     if user and check_password_hash(user.password, data.get("password", "")):
         access_token = create_access_token(identity=user.username, additional_claims={"role": user.role})
+        log_audit("LOGIN_SUCCESS", target=user.username, details=f"User logged in with role '{user.role}'")
         return jsonify({"status": "success", "token": access_token, "user": {"username": user.username, "role": user.role}})
+    log_audit("LOGIN_FAILED", target=data.get("username", "").strip(), details="Invalid username or password")
     return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
 @app.route("/api/register", methods=["POST"])
 def register():
     if not check_ip_rate_limit(limit=5, window_seconds=60):
         return jsonify({"status": "error", "message": "Too many registration attempts. Please wait."}), 429
+    
+    # If users already exist, require Admin authorization
+    if User.query.count() > 0:
+        try:
+            from flask_jwt_extended import verify_jwt_in_request
+            verify_jwt_in_request()
+            claims = get_jwt()
+            if claims.get("role") != "admin":
+                return jsonify({"status": "error", "message": "Forbidden: Only Admin users can register new accounts."}), 403
+        except Exception:
+            return jsonify({"status": "error", "message": "Unauthorized: Admin authorization required to register accounts."}), 401
+
     data = request.json or {}
     username = data.get("username", "").strip()
     password = data.get("password", "")
+    role = data.get("role", "staff")
+    if role not in ["admin", "pharmacist", "staff", "doctor"]:
+        return jsonify({"status": "error", "message": "Invalid role specified"}), 400
     if len(username) < 3:
         return jsonify({"status": "error", "message": "Username must be at least 3 characters"}), 400
     if len(password) < 6:
         return jsonify({"status": "error", "message": "Password must be at least 6 characters"}), 400
     if User.query.filter_by(username=username).first():
         return jsonify({"status": "error", "message": "Username already exists"}), 400
-    user = User(username=username, password=generate_password_hash(password), role=data.get("role", "staff"))
+    user = User(username=username, password=generate_password_hash(password), role=role)
     db.session.add(user)
     db.session.commit()
-    return jsonify({"status": "success", "message": "User created"})
+    log_audit("USER_CREATED", target=username, details=f"Created user with role '{role}'")
+    return jsonify({"status": "success", "message": "User created successfully"})
 
 @app.route("/api/users", methods=["GET"])
 @role_required("admin")
@@ -594,50 +663,128 @@ def add_patient():
     p = Patient(name=data["name"], phone=data.get("phone"), email=data.get("email"), medical_history=data.get("medical_history"))
     db.session.add(p)
     db.session.commit()
+    log_audit("PATIENT_ADDED", target=p.name, details=f"Added patient record ID {p.id}")
     return jsonify({"status": "success", "message": "Patient added", "patient": p.to_dict()})
 
 @app.route("/api/sales", methods=["POST"])
 @jwt_required()
 def create_sale():
-    data = request.json
-    new_sale = Sale(
-        customer_name=data.get("customer_name", "Walk-in"),
-        doctor_name=data.get("doctor_name", ""),
-        doctor_address=data.get("doctor_address", ""),
-        discount=float(data.get("discount", 0.0)),
-        total_amount=data["total_amount"],
-        payment_method=data.get("payment_method", "Cash"),
-        items=json.dumps(data["items"])
-    )
+    data = request.json or {}
     items = data.get("items", [])
-    
-    # Update inventory
-    for item in items:
-        med = Medicine.query.filter_by(name=item["name"]).first()
-        if med and med.quantity >= int(item["qty"]):
-            med.quantity -= int(item["qty"])
-            
-    db.session.add(new_sale)
-    
-    # Loyalty Points Handling
-    phone = data.get("customer_phone")
-    if phone:
-        loyalty = CustomerLoyalty.query.filter_by(phone=phone).first()
-        if not loyalty:
-            loyalty = CustomerLoyalty(phone=phone, points=0)
-            db.session.add(loyalty)
-        
-        # Redeem points if applied
-        redeemed_points = int(data.get("redeemed_points", 0))
-        if redeemed_points > 0 and loyalty.points >= redeemed_points:
-            loyalty.points -= redeemed_points
-            
-        # Earn new points (1 point per 100 Rs spent)
-        points_earned = int(data["total_amount"] // 100)
-        loyalty.points += points_earned
+    if not items or not isinstance(items, list):
+        return jsonify({"status": "error", "message": "Sale cart items are required"}), 400
 
-    db.session.commit()
-    return jsonify({"status": "success", "message": "Sale completed", "sale": new_sale.to_dict()})
+    today = datetime.now().date()
+    calculated_subtotal = 0.0
+    processed_items = []
+
+    # 1. Validate all items first (stock availability, expiry date, unit price)
+    for item in items:
+        med_id = item.get("id") or item.get("medicine_id")
+        med_name = item.get("name", "").strip()
+        requested_qty = int(item.get("qty", 0))
+
+        if requested_qty <= 0:
+            return jsonify({"status": "error", "message": f"Invalid quantity ({requested_qty}) for item '{med_name}'"}), 400
+
+        med = None
+        if med_id:
+            med = Medicine.query.get(med_id)
+        if not med and med_name:
+            med = Medicine.query.filter(db.func.lower(Medicine.name) == med_name.lower()).first()
+
+        if not med:
+            return jsonify({"status": "error", "message": f"Medicine '{med_name}' not found in inventory"}), 404
+
+        # Expiry Check
+        if med.expiry_date and med.expiry_date <= today:
+            return jsonify({
+                "status": "error",
+                "message": f"EXPIRED MEDICINE BLOCK: '{med.name}' expired on {med.expiry_date.strftime('%Y-%m-%d')} and cannot be dispensed."
+            }), 400
+
+        # Stock Availability Check
+        if med.quantity < requested_qty:
+            return jsonify({
+                "status": "error",
+                "message": f"INSUFFICIENT STOCK: '{med.name}' requested quantity is {requested_qty}, but only {med.quantity} unit(s) available."
+            }), 400
+
+        item_unit_price = float(med.price)
+        line_total = round(item_unit_price * requested_qty, 2)
+        calculated_subtotal += line_total
+
+        processed_items.append({
+            "medicine_obj": med,
+            "id": med.id,
+            "name": med.name,
+            "qty": requested_qty,
+            "price": item_unit_price,
+            "batch_number": med.batch_number or "N/A",
+            "expiry_date": med.expiry_date.strftime("%Y-%m-%d") if med.expiry_date else "",
+            "line_total": line_total
+        })
+
+    # 2. Server-side discount & total calculation
+    discount_input = float(data.get("discount", 0.0))
+    if discount_input < 0 or discount_input > 100:
+        return jsonify({"status": "error", "message": "Invalid discount amount"}), 400
+
+    if discount_input <= 50.0:  # Percentage discount
+        discount_amount = round((calculated_subtotal * discount_input) / 100.0, 2)
+    else:
+        discount_amount = min(discount_input, calculated_subtotal)
+
+    server_total_amount = round(max(0.0, calculated_subtotal - discount_amount), 2)
+
+    # 3. Deduct stock and save sale atomically
+    try:
+        for p in processed_items:
+            p["medicine_obj"].quantity -= p["qty"]
+
+        items_payload = [{
+            "id": p["id"],
+            "name": p["name"],
+            "qty": p["qty"],
+            "price": p["price"],
+            "batch_number": p["batch_number"],
+            "expiry_date": p["expiry_date"],
+            "line_total": p["line_total"]
+        } for p in processed_items]
+
+        new_sale = Sale(
+            customer_name=data.get("customer_name", "Walk-in"),
+            doctor_name=data.get("doctor_name", ""),
+            doctor_address=data.get("doctor_address", ""),
+            discount=discount_amount,
+            total_amount=server_total_amount,
+            payment_method=data.get("payment_method", "Cash"),
+            items=json.dumps(items_payload)
+        )
+        db.session.add(new_sale)
+
+        # Loyalty Points Handling
+        phone = data.get("customer_phone")
+        if phone:
+            loyalty = CustomerLoyalty.query.filter_by(phone=phone).first()
+            if not loyalty:
+                loyalty = CustomerLoyalty(phone=phone, points=0)
+                db.session.add(loyalty)
+            
+            redeemed_points = int(data.get("redeemed_points", 0))
+            if redeemed_points > 0 and loyalty.points >= redeemed_points:
+                loyalty.points -= redeemed_points
+                
+            points_earned = int(server_total_amount // 100)
+            loyalty.points += points_earned
+
+        db.session.commit()
+        log_audit("SALE_CREATED", target=f"Sale #{new_sale.id}", details=f"Customer: {new_sale.customer_name}, Total: ₹{server_total_amount}, Items: {len(processed_items)}")
+        return jsonify({"status": "success", "message": "Sale completed successfully", "sale": new_sale.to_dict()})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Sale transaction failed: {str(e)}"}), 500
 
 
 @app.route("/api/dashboard", methods=["GET"])
@@ -778,44 +925,73 @@ def category_dist():
         "data": [float(c[1]) for c in cats]
     })
 
+@app.route("/api/audit-logs", methods=["GET"])
+@role_required("admin")
+def get_audit_logs():
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(100).all()
+    return jsonify([l.to_dict() for l in logs])
+
 @app.route("/api/inventory", methods=["GET", "POST"])
 @jwt_required()
 def inventory():
     if request.method == "GET":
         return jsonify([m.to_dict() for m in Medicine.query.all()])
-    data = request.json
-    med = Medicine(
-        name=data["name"],
-        batch_number=data.get("batch_number", ""),
-        box_number=data.get("box_number", ""),
-        category=data.get("category", ""),
-        quantity=int(data["quantity"]),
-        price=float(data["price"]),
-        expiry_date=datetime.strptime(data["expiry_date"], "%Y-%m-%d").date()
-    )
-    db.session.add(med)
-    db.session.commit()
-    return jsonify({"status": "success"})
+
+    claims = get_jwt()
+    if claims.get("role") not in ["admin", "pharmacist"]:
+        return jsonify({"status": "error", "message": "Forbidden: Only Admin or Pharmacist can add inventory."}), 403
+
+    data = request.json or {}
+    try:
+        med = Medicine(
+            name=data["name"].strip(),
+            batch_number=data.get("batch_number", "").strip(),
+            box_number=data.get("box_number", "").strip(),
+            category=data.get("category", "").strip(),
+            quantity=int(data.get("quantity", 0)),
+            price=float(data.get("price", 0.0)),
+            expiry_date=datetime.strptime(data["expiry_date"], "%Y-%m-%d").date()
+        )
+        db.session.add(med)
+        db.session.commit()
+        log_audit("MEDICINE_ADDED", target=med.name, details=f"Batch: {med.batch_number}, Qty: {med.quantity}, Price: ₹{med.price}")
+        return jsonify({"status": "success", "message": "Medicine added to inventory", "medicine": med.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Failed to add medicine: {str(e)}"}), 400
 
 @app.route("/api/inventory/<int:id>", methods=["PUT", "DELETE"])
 @jwt_required()
 def update_inventory(id):
     med = Medicine.query.get_or_404(id)
+    claims = get_jwt()
+    user_role = claims.get("role")
+
     if request.method == "DELETE":
+        if user_role != "admin":
+            return jsonify({"status": "error", "message": "Forbidden: Only Admin users can delete inventory items."}), 403
+        med_name = med.name
         db.session.delete(med)
         db.session.commit()
-        return jsonify({"status": "success"})
-    data = request.json
-    med.name = data.get("name", med.name)
-    med.batch_number = data.get("batch_number", med.batch_number)
-    med.box_number = data.get("box_number", med.box_number)
-    med.category = data.get("category", med.category)
+        log_audit("MEDICINE_DELETED", target=med_name, details=f"Deleted inventory item ID {id}")
+        return jsonify({"status": "success", "message": "Medicine deleted"})
+
+    if user_role not in ["admin", "pharmacist"]:
+        return jsonify({"status": "error", "message": "Forbidden: Only Admin or Pharmacist can edit inventory."}), 403
+
+    data = request.json or {}
+    med.name = data.get("name", med.name).strip()
+    med.batch_number = data.get("batch_number", med.batch_number).strip()
+    med.box_number = data.get("box_number", med.box_number).strip()
+    med.category = data.get("category", med.category).strip()
     med.quantity = int(data.get("quantity", med.quantity))
     med.price = float(data.get("price", med.price))
     if "expiry_date" in data:
         med.expiry_date = datetime.strptime(data["expiry_date"], "%Y-%m-%d").date()
+
     db.session.commit()
-    return jsonify({"status": "success"})
+    log_audit("MEDICINE_UPDATED", target=med.name, details=f"Updated Qty: {med.quantity}, Price: ₹{med.price}")
+    return jsonify({"status": "success", "message": "Medicine updated", "medicine": med.to_dict()})
 
 @app.route("/api/suppliers", methods=["GET", "POST"])
 @jwt_required()

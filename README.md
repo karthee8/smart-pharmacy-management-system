@@ -1,42 +1,40 @@
-# 🏥 Smart Pharmacy Management System
+# 🏥 Smart Stock Pharmacy Management System
 
 [![Python Version](https://img.shields.io/badge/Python-3.12%2B-blue.svg?logo=python)](https://python.org)
 [![Framework](https://img.shields.io/badge/Backend-Flask%202.3-green.svg?logo=flask)](https://flask.palletsprojects.com/)
+[![Desktop Shell](https://img.shields.io/badge/Desktop-Electron%20v42-47848F.svg?logo=electron)](https://www.electronjs.org/)
 [![AI Powered](https://img.shields.io/badge/AI-Google%20Gemini%202.0%20Flash-orange.svg?logo=google)](https://ai.google.dev/)
-[![Auth](https://img.shields.io/badge/Security-JWT%20%2B%20Werkzeug%20Hashing-red.svg)](https://flask-jwt-extended.readthedocs.io/)
+[![Security](https://img.shields.io/badge/Security-JWT%20%2B%20RBAC%20%2B%20Audit%20Logs-red.svg)](https://flask-jwt-extended.readthedocs.io/)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
-> An **enterprise-grade, AI-powered Pharmacy Management System** built with Python Flask, SQLite, and Google Gemini API. Designed for high-performance point-of-sale (POS) billing, automated FEFO inventory management, clinical AI drug safety checks, and patient CRM tracking.
+> **Enterprise-Grade, Secure, AI-Powered Pharmacy Management System**  
+> Built with **Electron**, **Python Flask**, **SQLite**, and **Google Gemini AI**. Designed for high-performance point-of-sale (POS) billing, automated FEFO inventory management, clinical AI drug safety checks, strict RBAC authorization, and CDSCO/FDA audit compliance.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key System Features
 
 ### 💳 POS Billing & Thermal Invoicing
-- **Instant Search & Autocomplete**: Real-time medicine lookup by name, category, or barcode batch.
-- **🔥 FEFO Clearance Auto-Discounts**: Automated First-Expired, First-Out (FEFO) clearance pricing (15%–25% off) for near-expiry medicines to prevent stock loss.
-- **🧾 Dual Receipt Checkout**: Supports both standard **ReportLab PDF invoice generation** and compact **80mm ESC/POS Thermal Receipt printing**.
+- **Instant Search & Autocomplete**: Real-time medicine lookup by name, category, box, or batch.
+- **🔥 FEFO Clearance Pricing**: Automated First-Expired, First-Out (FEFO) clearance discount calculation (15%–25% off) for near-expiry medicines to prevent stock loss.
+- **🚫 Expired Drug Blockout**: Automatic server-side rejection prevents dispensing any expired medications.
+- **🧾 Dual Receipt Checkout**: Supports both standard PDF invoice generation and compact ESC/POS thermal receipt printing.
 - **🎁 Customer Loyalty Program**: Earn 1 point per ₹100 spent; redeem points instantly at checkout.
 
+### 🛡️ Enterprise Security & Regulatory Compliance
+- **Dynamic JWT Secret**: Auto-generates a persistent 64-byte random key stored in `data/.jwt_secret`.
+- **Session Lifecycle**: 12-hour session expiration with automatic logout on token expiry.
+- **Registration Protection**: `/api/register` restricted exclusively to `admin` accounts (unlocked only during initial setup).
+- **Strict Server-Side Price Calculations**: Invoice totals recalculated on the backend to prevent price tampering or negative total exploits.
+- **Role-Based Access Control (RBAC)**: Fine-grained `@role_required` guards for Admin, Pharmacist, and Staff.
+- **Immutable Audit Logging**: Every price edit, stock addition, deletion, user creation, and sale generates an entry in the `AuditLog` table.
+- **Electron RCE Protection**: `contextIsolation: true` and `nodeIntegration: false` in `main.js`.
+
 ### 🤖 Clinical AI Suite (Google Gemini 2.0 Flash)
-- **⚠️ AI Drug Interaction Checker**: Analyzes active cart items against known patient allergies/conditions for severe drug-drug interactions.
+- **⚠️ AI Drug Interaction Checker**: Analyzes active cart items against known patient allergies/conditions for severe drug interactions.
 - **🧬 Anatomy Symptom Matcher**: Interactive anatomical body map recommending the most appropriate in-stock medication based on symptoms.
 - **📷 Vision OCR Scanner**: Upload invoice tables or prescription photos to automatically extract items into JSON and populate inventory/billing.
 - **💬 Clinical Pharmacist Assistant**: Natural-language chatbot providing dosage guidelines, side effects, and alternative drug recommendations.
-- **🛡️ Offline Fallback Protection**: Graceful fallback responses if the network or API key is unavailable.
-
-### ⚡ Power Tools & Modern UX
-- **⌨️ Global Command Palette (`Ctrl + K`)**: Spotlight search overlay to jump anywhere in the app or search medicines instantly.
-- **🌙 Light / Dark Theme Switcher**: Toggle between Clinical Dark Glassmorphism and Ultra-Clean Light Mode.
-- **✨ Ambient Medical Mesh Canvas**: Low-overhead, sleek ambient background animation built with Vanilla JS Canvas.
-
-### 🔒 Enterprise Security Architecture
-- **Password Hashing**: Passwords stored using PBKDF2 with SHA-256 via Werkzeug.
-- **JWT Authentication**: 12-hour expiration JWT token authorization on all 33 data endpoints.
-- **Role-Based Access Control (RBAC)**: `@role_required("admin")` decorators protecting administrative user management routes.
-- **IP Rate Limiting**: Brute-force protection capping login (10/min) and registration (5/min) per IP.
-- **OWASP Security Headers**: Automatic `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `Content-Security-Policy` header injection.
-- **File Upload Guard**: Strict extension (`.png`, `.jpg`, `.jpeg`, `.webp`) and 16 MB payload caps.
 
 ---
 
@@ -44,18 +42,18 @@
 
 ```mermaid
 flowchart TD
-    Client["🖥️ Frontend SPA (HTML5 / Vanilla CSS / JS)"] -->|HTTP / JSON + JWT| API["🐍 Flask REST API (app.py)"]
+    Client["🖥️ Electron GUI Client (HTML5 / CSS3 / Vanilla JS)"] -->|HTTP / REST + JWT| API["🐍 Flask REST API (app.py)"]
     
-    subgraph Security Layer
-        API --> Auth["🔒 JWT & Password Hashing Guard"]
-        API --> RateLimit["🛡️ IP Rate Limiter & Security Headers"]
-        API --> RBAC["🔑 Role-Based Access Control"]
+    subgraph Security Guard & Audit
+        API --> Auth["🔒 JWT Dynamic Secret & 12h Expiration"]
+        API --> RBAC["🔑 Role-Based Access Control (Admin / Pharmacist / Staff)"]
+        API --> Audit["📜 Immutable AuditLog Table"]
+        API --> Validation["🛡️ Server-Side Price & Expired Drug Validator"]
     end
     
-    subgraph Storage & Services
+    subgraph Data & Storage
         API --> DB[("🗄️ SQLite Database (pharmacy.db)")]
-        API --> PDF["📄 ReportLab PDF Generator"]
-        API --> Thermal["🧾 Thermal Receipt Formatter"]
+        API --> Backup["📦 Auto Database Backup System"]
     end
     
     subgraph External AI Engine
@@ -65,101 +63,63 @@ flowchart TD
 
 ---
 
-## 🛠️ Technology Stack
+## 🗄️ Database Schema Summary
 
-| Component | Technology Used |
-|-----------|------------------|
-| **Backend Core** | Python 3.12+, Flask 2.3 |
-| **Database** | SQLite3 via Flask-SQLAlchemy |
-| **Authentication** | Flask-JWT-Extended, Werkzeug Security |
-| **AI SDK** | `google-genai` (Gemini 2.0 Flash) |
-| **PDF & Reports** | ReportLab 4.x, XlsxWriter |
-| **QR Code System** | `qrcode`, `html5-qrcode`, `pako` |
-| **Desktop Window** | PyWebView 4.x |
-| **Frontend** | HTML5, Vanilla CSS3 (Custom Glassmorphism), Inter Font |
-
----
-
-## 🚀 Quick Start Guide (Desktop App)
-
-### 1. Launching the Electron Desktop Application (No Terminal Required!)
-- **1-Click Silent Launch (Recommended)**: Double-click **[`Smart Pharmacy Desktop.vbs`](file:///d:/smart%20stock%20pharmacy%20management/Smart%20Pharmacy%20Desktop.vbs)** in the root directory. This opens the desktop app window completely silently without showing any command prompt window.
-- **Standalone `.exe` App**: Double-click **`dist/win-unpacked/Smart Pharmacy Management System.exe`**.
-
-### 2. Manual Startup (Development)
-```bash
-# Start Flask Backend Server
-python backend/app.py
-
-# Launch Electron App UI
-node node_modules/electron/cli.js .
-```
-> Or open **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in any modern web browser.
+| Table | Description | Key Fields |
+|---|---|---|
+| `user` | System accounts & credentials | `username`, `password` (Werkzeug Hash), `role` (`admin`/`pharmacist`/`staff`) |
+| `medicine` | Inventory & batch details | `name`, `batch_number`, `box_number`, `quantity`, `price`, `expiry_date` |
+| `sale` | Complete billing records | `customer_name`, `doctor_name`, `discount`, `total_amount`, `items` (JSON) |
+| `supplier` / `supplier_bill` | Purchasing & Accounts | `supplier_name`, `bill_number`, `total_amount`, `paid_amount`, `payment_status` |
+| `patient` / `customer_loyalty` | CRM & Refill tracking | `name`, `phone`, `email`, `medical_history`, `points` |
+| `doctor_profile` / `prescription` | Telemedicine | `doctor_name`, `specialty`, `diagnosis`, `items`, `status` |
+| `audit_log` | Security audit trail | `timestamp`, `username`, `action`, `target`, `details`, `ip_address` |
 
 ---
 
-## 📂 Project Organization & File Structure
-
-```text
-smart-stock-pharmacy-management/
-├── backend/                             # Python Flask REST API & Database logic
-│   ├── app.py                           # Core backend server (JWT, POS, AI Gemini integration)
-│   ├── requirements.txt                 # Python dependencies
-│   └── .env                             # Environment configuration & API keys
-├── docs/                                # Project documentation & IEEE research papers
-│   └── Smart_Pharmacy_IEEE_Paper.docx
-├── frontend/                            # Single-Page Application Interface
-│   ├── assets/                          # UI Backgrounds, icons, and illustrations
-│   └── index.html                       # Main HTML5, CSS3 & JavaScript application UI
-├── dist/                                # Built Production Binaries
-│   └── win-unpacked/
-│       └── Smart Pharmacy Management System.exe  # Standalone Windows Executable
-├── main.js                              # Electron Main Process (Spawns Python silently & controls GUI)
-├── package.json                         # Node dependencies & Electron Builder configuration
-├── Smart Pharmacy Desktop.vbs           # 1-Click Silent Launcher Script (No CMD window)
-└── Start Smart Pharmacy Desktop.bat     # Windows Console Launcher
-```
-
----
-
-## 🔑 Default Seed Credentials
+## 🔑 Default Credentials (Initial Setup)
 
 | Role | Username | Default Password | Access Level |
 |------|----------|------------------|--------------|
-| **Admin** | `admin` | `password123` | Full Access (User Management, Inventory, Sales, Reports) |
-| **Pharmacist** | `pharmacist` | `pass123` | POS Billing, Inventory Edit, AI Assistant |
-| **Staff** | `staff` | `pass123` | POS Billing & Patient History |
+| **Admin** | `admin` | `password123` | Full Control (Users, Inventory, Sales, Audit Logs, Backup) |
+| **Pharmacist** | `pharmacist` | `pass123` | POS Billing, Inventory Addition/Edit, AI Suite |
+| **Staff** | `staff` | `pass123` | POS Billing, Patient CRM, Telemedicine Lookup |
 
 ---
 
-## 📡 REST API Reference
+## 🚀 Quick Start Guide
 
-| Endpoint | Method | Protection | Description |
-|----------|--------|------------|-------------|
-| `/api/login` | `POST` | Public (Rate-Limited) | Authenticate user & receive JWT token |
-| `/api/register` | `POST` | Admin Only | Register new staff/admin user |
-| `/api/inventory` | `GET`, `POST` | JWT Protected | Fetch or add medicines |
-| `/api/inventory/<id>` | `PUT`, `DELETE` | JWT / Admin | Update or delete medicine |
-| `/api/sales` | `GET`, `POST` | JWT Protected | View sales history or create new sale |
-| `/api/generate-invoice` | `POST` | JWT Protected | Generate downloadable ReportLab PDF invoice |
-| `/api/generate-thermal-receipt` | `POST` | JWT Protected | Generate 80mm ESC/POS thermal receipt |
-| `/api/check-interactions` | `POST` | JWT Protected | Run Gemini AI drug-drug interaction check |
-| `/api/anatomy-symptom` | `POST` | JWT Protected | Recommend stock medicine based on symptom |
-| `/api/vision-ocr` | `POST` | JWT Protected | AI Vision OCR invoice image scanner |
-| `/api/vision-prescription` | `POST` | JWT Protected | AI Vision OCR prescription scanner |
-| `/api/chat` | `POST` | JWT Protected | Clinical Pharmacist AI Chatbot |
-| `/api/refill-alerts` | `POST` | JWT Protected | Fetch patient chronic refill reminders |
+### 1. Launching Desktop App (Windows 1-Click)
+- **1-Click Silent Launch**: Double-click **`Smart Pharmacy Desktop.vbs`** in the root directory.
+- **Standalone Package**: Double-click **`dist/win-unpacked/Smart Pharmacy Management System.exe`**.
+
+### 2. Development Setup
+```bash
+# Install Python backend dependencies
+cd backend
+pip install -r requirements.txt
+
+# Start Python backend server
+python app.py
+
+# Launch Electron desktop interface
+npm start
+```
+> Access web API interface directly at **[http://127.0.0.1:5000](http://127.0.0.1:5000)**.
 
 ---
 
-## 🤝 Contributing
+## 📡 REST API Quick Reference
 
-Contributions are welcome! Follow these steps to contribute:
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+| Endpoint | Method | Role Required | Description |
+|---|---|---|---|
+| `/api/login` | `POST` | Public | Authenticate user & issue JWT token |
+| `/api/register` | `POST` | Admin | Register new system user |
+| `/api/users` | `GET` | Admin | List all registered accounts |
+| `/api/inventory` | `GET`, `POST` | Pharmacist / Admin | List or add medicines |
+| `/api/inventory/<id>` | `PUT`, `DELETE` | Pharmacist / Admin (Delete=Admin) | Update or delete medicine |
+| `/api/sales` | `POST` | Staff / Pharmacist / Admin | Process sale with server price validation |
+| `/api/audit-logs` | `GET` | Admin | Retrieve security audit history |
 
 ---
 
