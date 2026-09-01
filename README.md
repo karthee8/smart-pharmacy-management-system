@@ -80,36 +80,45 @@ flowchart TD
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Quick Start Guide (Desktop App)
 
-### Prerequisites
-- Python 3.10+ installed
-- Google Gemini API key (Get one free at [Google AI Studio](https://aistudio.google.com/))
+### 1. Launching the Electron Desktop Application (No Terminal Required!)
+- **1-Click Silent Launch (Recommended)**: Double-click **[`Smart Pharmacy Desktop.vbs`](file:///d:/smart%20stock%20pharmacy%20management/Smart%20Pharmacy%20Desktop.vbs)** in the root directory. This opens the desktop app window completely silently without showing any command prompt window.
+- **Standalone `.exe` App**: Double-click **`dist/win-unpacked/Smart Pharmacy Management System.exe`**.
 
-### 1. Clone the Repository
+### 2. Manual Startup (Development)
 ```bash
-git clone https://github.com/YOUR_USERNAME/smart-stock-pharmacy-management.git
-cd smart-stock-pharmacy-management
-```
-
-### 2. Install Dependencies
-```bash
-pip install flask flask-sqlalchemy flask-cors flask-jwt-extended google-genai reportlab xlsxwriter qrcode pillow pywebview python-dotenv
-```
-
-### 3. Configure Environment Variables
-Create a `.env` file in the project root:
-```env
-GEMINI_API_KEY=your_actual_gemini_api_key_here
-JWT_SECRET=your_custom_jwt_secret_key
-DEBUG=False
-```
-
-### 4. Launch Application
-```bash
+# Start Flask Backend Server
 python backend/app.py
+
+# Launch Electron App UI
+node node_modules/electron/cli.js .
 ```
-> The desktop application window will open automatically. You can also visit **[http://localhost:5000](http://localhost:5000)** in any browser.
+> Or open **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in any modern web browser.
+
+---
+
+## 📂 Project Organization & File Structure
+
+```text
+smart-stock-pharmacy-management/
+├── backend/                             # Python Flask REST API & Database logic
+│   ├── app.py                           # Core backend server (JWT, POS, AI Gemini integration)
+│   ├── requirements.txt                 # Python dependencies
+│   └── .env                             # Environment configuration & API keys
+├── docs/                                # Project documentation & IEEE research papers
+│   └── Smart_Pharmacy_IEEE_Paper.docx
+├── frontend/                            # Single-Page Application Interface
+│   ├── assets/                          # UI Backgrounds, icons, and illustrations
+│   └── index.html                       # Main HTML5, CSS3 & JavaScript application UI
+├── dist/                                # Built Production Binaries
+│   └── win-unpacked/
+│       └── Smart Pharmacy Management System.exe  # Standalone Windows Executable
+├── main.js                              # Electron Main Process (Spawns Python silently & controls GUI)
+├── package.json                         # Node dependencies & Electron Builder configuration
+├── Smart Pharmacy Desktop.vbs           # 1-Click Silent Launcher Script (No CMD window)
+└── Start Smart Pharmacy Desktop.bat     # Windows Console Launcher
+```
 
 ---
 

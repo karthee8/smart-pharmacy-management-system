@@ -1,7 +1,7 @@
 {
   "name": "smart-stock-pharmacy-management",
   "version": "1.0.0",
-  "description": "",
+  "description": "Smart Pharmacy Management System — Portable Desktop App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -15,12 +15,20 @@
       "output": "dist"
     },
     "asar": false,
+    "files": [
+      "main.js",
+      "frontend/**/*",
+      "package.json"
+    ],
     "win": {
-      "target": "nsis"
+      "target": "dir"
     },
     "extraFiles": [
-      "backend/**",
-      "frontend/**"
+      {
+        "from": "backend/dist/SmartPharmacyBackend",
+        "to": "backend-dist/SmartPharmacyBackend",
+        "filter": ["**/*"]
+      }
     ]
   },
   "keywords": [],
